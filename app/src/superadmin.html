@@ -75,6 +75,17 @@
                 </tbody>
             </table>
         </div>
+
+        <!-- Import Section -->
+        <div class="mb-6 p-4 border border-gray-300 rounded bg-gray-50">
+            <h2 class="text-xl font-semibold mb-2">Import Data</h2>
+            <p class="text-sm text-red-600 mb-2">Warning: Importing will completely replace all current namespaces and logos.</p>
+            <form id="import-form" class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <input type="file" id="import-file-input" name="backupFile" accept=".zip" required class="flex-grow">
+                <button type="submit" id="import-data-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out w-full sm:w-auto">Import Data</button>
+            </form>
+            <p id="import-status" class="mt-2 text-sm"></p>
+        </div>
     </div>
 
     <script>
