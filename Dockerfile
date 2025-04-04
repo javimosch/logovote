@@ -15,8 +15,8 @@ COPY app/ ./app/
 
 # Copy data directory structure (optional, but good for initial setup if needed)
 # The actual data will be mounted via volume, but this ensures dirs exist if volume isn't mounted initially
-COPY data/ /app/data/
-RUN mkdir -p /app/data/namespaces && mkdir -p /app/data/uploads
+
+RUN mkdir -p /app/data/ && mkdir -p /app/data/namespaces && mkdir -p /app/data/uploads
 
 # Make port 3000 available to the world outside this container
 EXPOSE 3000
