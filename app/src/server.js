@@ -192,6 +192,9 @@ async function ensureDataDirs() {
 // --- Middleware ---
 app.use(express.json());
 app.use('/data/uploads', express.static(UPLOADS_DIR));
+// --- NEW: Serve locale files ---
+app.use('/locales', express.static(path.join(__dirname, 'locales')));
+// --- END NEW ---
 
 // --- Multer Setup for File Uploads ---
 const storage = multer.diskStorage({

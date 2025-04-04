@@ -3,22 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LogoVote Superadmin</title>
+    <title data-i18n="superadminTitle">LogoVote Superadmin</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Ensure table layout handles long links */
         table { table-layout: fixed; word-wrap: break-word; }
-        th, td { padding: 8px 4px; } /* Adjust padding */
+        th, td { padding: 8px 4px; }
 
-        /* Style for file input */
         input[type="file"] {
             display: block;
             width: 100%;
             padding: 0.5rem;
             margin-top: 0.5rem;
-            border: 1px solid #d1d5db; /* gray-300 */
-            border-radius: 0.375rem; /* rounded-md */
-            background-color: #f9fafb; /* gray-50 */
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            background-color: #f9fafb;
             cursor: pointer;
         }
         input[type="file"]::file-selector-button {
@@ -26,70 +24,156 @@
             margin-right: 0.5rem;
             border: none;
             border-radius: 0.375rem;
-            background-color: #4f46e5; /* indigo-600 */
+            background-color: #4f46e5;
             color: white;
-            font-weight: 600; /* font-semibold */
+            font-weight: 600;
             cursor: pointer;
             transition: background-color 0.2s;
         }
         input[type="file"]::file-selector-button:hover {
-            background-color: #4338ca; /* indigo-700 */
+            background-color: #4338ca;
+        }
+
+        .lang-switcher a {
+            cursor: pointer;
+            text-decoration: underline;
+            margin: 0 5px;
+        }
+        .lang-switcher a.active {
+            font-weight: bold;
+            text-decoration: none;
+            cursor: default;
         }
     </style>
 </head>
 <body class="bg-gray-100 p-8 font-sans">
 
     <div class="container mx-auto bg-white p-6 rounded-lg shadow-md">
-        <h1 class="text-3xl font-bold mb-6 text-center text-red-600">LogoVote Superadmin</h1>
-
-        <!-- Action Buttons -->
-        <div class="mb-6 flex flex-wrap gap-4"> <!-- Use flex-wrap and gap -->
-            <button id="refresh-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out">Refresh List</button>
-            <button id="delete-empty-btn" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out">Delete Empty Namespaces</button>
-            <button id="delete-all-btn" class="bg-red-700 hover:bg-red-800 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out">Delete ALL Namespaces</button>
-            <button id="export-data-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out">Export Data</button>
+        <div class="lang-switcher text-right mb-4 text-sm">
+            <a id="lang-en">EN</a> | <a id="lang-fr">FR</a>
         </div>
 
-        <!-- Status Message Area -->
+        <h1 class="text-3xl font-bold mb-6 text-center text-red-600" data-i18n="superadminTitle">LogoVote Superadmin</h1>
+
+        <div class="mb-6 flex flex-wrap gap-4">
+            <button id="refresh-btn" data-i18n="refreshListBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out">Refresh List</button>
+            <button id="delete-empty-btn" data-i18n="deleteEmptyBtn" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out">Delete Empty Namespaces</button>
+            <button id="delete-all-btn" data-i18n="deleteAllBtn" class="bg-red-700 hover:bg-red-800 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out">Delete ALL Namespaces</button>
+            <button id="export-data-btn" data-i18n="exportDataBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out">Export Data</button>
+        </div>
+
         <div id="status-message" class="mb-4 text-center font-medium"></div>
 
-        <!-- Namespace List -->
         <div class="overflow-x-auto">
             <table class="min-w-full w-full bg-white border border-gray-300">
                 <thead class="bg-gray-200">
                     <tr>
-                        <th class="py-2 px-4 border-b text-left w-[15%]">Namespace ID</th>
-                        <th class="py-2 px-4 border-b text-left w-[15%]">Created At</th>
-                        <th class="py-2 px-4 border-b text-right w-[8%]">Logos</th>
-                        <th class="py-2 px-4 border-b text-right w-[8%]">Votes</th>
-                        <th class="py-2 px-4 border-b text-left w-[20%]">Public Link</th>
-                        <th class="py-2 px-4 border-b text-left w-[20%]">Admin Link</th>
-                        <th class="py-2 px-4 border-b text-left w-[14%]">Friendly URL</th>
-                        <th class="py-2 px-4 border-b text-center w-[10%]">Actions</th>
+                        <th class="py-2 px-4 border-b text-left w-[15%]" data-i18n="tableHeaderNamespaceId">Namespace ID</th>
+                        <th class="py-2 px-4 border-b text-left w-[15%]" data-i18n="tableHeaderCreatedAt">Created At</th>
+                        <th class="py-2 px-4 border-b text-right w-[8%]" data-i18n="tableHeaderLogos">Logos</th>
+                        <th class="py-2 px-4 border-b text-right w-[8%]" data-i18n="tableHeaderVotes">Votes</th>
+                        <th class="py-2 px-4 border-b text-left w-[20%]" data-i18n="tableHeaderPublicLink">Public Link</th>
+                        <th class="py-2 px-4 border-b text-left w-[20%]" data-i18n="tableHeaderAdminLink">Admin Link</th>
+                        <th class="py-2 px-4 border-b text-left w-[14%]" data-i18n="tableHeaderFriendlyUrl">Friendly URL</th>
+                        <th class="py-2 px-4 border-b text-center w-[10%]" data-i18n="tableHeaderActions">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="namespace-list">
                     <tr>
-                        <td colspan="8" class="text-center py-4 text-gray-500">Loading namespaces...</td>
+                        <td colspan="8" class="text-center py-4 text-gray-500" data-i18n="tableLoading">Loading namespaces...</td>
                     </tr>
                 </tbody>
             </table>
         </div>
 
-        <!-- Import Section -->
         <div class="mb-6 p-4 border border-gray-300 rounded bg-gray-50">
-            <h2 class="text-xl font-semibold mb-2">Import Data</h2>
-            <p class="text-sm text-red-600 mb-2">Warning: Importing will completely replace all current namespaces and logos.</p>
+            <h2 class="text-xl font-semibold mb-2" data-i18n="importDataTitle">Import Data</h2>
+            <p class="text-sm text-red-600 mb-2" data-i18n="importWarning">Warning: Importing will completely replace all current namespaces and logos.</p>
             <form id="import-form" class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                 <input type="file" id="import-file-input" name="backupFile" accept=".zip" required class="flex-grow">
-                <button type="submit" id="import-data-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out w-full sm:w-auto">Import Data</button>
+                <button type="submit" id="import-data-btn" data-i18n="importDataBtn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out w-full sm:w-auto">Import Data</button>
             </form>
             <p id="import-status" class="mt-2 text-sm"></p>
         </div>
     </div>
 
     <script>
-        const apiUrlBase = '/superadmin'; // Base path for superadmin API calls
+        const supportedLanguages = ['en', 'fr'];
+        let currentLanguage = 'en';
+        let translations = {};
+
+        function getPreferredLanguage() {
+            const storedLang = localStorage.getItem('preferredLanguage');
+            if (storedLang && supportedLanguages.includes(storedLang)) {
+                return storedLang;
+            }
+            const browserLang = navigator.language.split('-')[0];
+            return supportedLanguages.includes(browserLang) ? browserLang : 'en';
+        }
+
+        async function loadTranslations(lang) {
+            try {
+                const response = await fetch(`locales/${lang}.json`);
+                if (!response.ok) {
+                    throw new Error(`Could not load ${lang}.json`);
+                }
+                translations = await response.json();
+                console.log(`Translations loaded for ${lang}`);
+            } catch (error) {
+                console.error('Error loading translations:', error);
+                if (lang !== 'en') {
+                    console.warn(`Falling back to English translations.`);
+                    await loadTranslations('en');
+                } else {
+                    translations = {};
+                }
+            }
+        }
+
+        function t(key, params = {}) {
+            let translation = translations[key] || key;
+            for (const param in params) {
+                translation = translation.replace(`{${param}}`, params[param]);
+            }
+            return translation;
+        }
+
+        function translatePage() {
+            document.querySelectorAll('[data-i18n]').forEach(element => {
+                const key = element.getAttribute('data-i18n');
+                element.textContent = t(key);
+            });
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(element => {
+                const key = element.getAttribute('data-i18n-placeholder');
+                element.placeholder = t(key);
+            });
+            document.querySelectorAll('[data-i18n-title]').forEach(element => {
+                const key = element.getAttribute('data-i18n-title');
+                element.title = t(key);
+            });
+            document.querySelectorAll('.lang-switcher a').forEach(a => {
+                a.classList.remove('active');
+            });
+            const activeLink = document.getElementById(`lang-${currentLanguage}`);
+            if (activeLink) {
+                activeLink.classList.add('active');
+            }
+            document.documentElement.lang = currentLanguage;
+        }
+
+        async function setLanguage(lang) {
+            if (!supportedLanguages.includes(lang)) {
+                console.warn(`Unsupported language: ${lang}`);
+                return;
+            }
+            currentLanguage = lang;
+            localStorage.setItem('preferredLanguage', lang);
+            await loadTranslations(lang);
+            translatePage();
+            await loadNamespaces();
+        }
+
+        const apiUrlBase = '/superadmin';
         const namespaceListBody = document.getElementById('namespace-list');
         const refreshBtn = document.getElementById('refresh-btn');
         const deleteEmptyBtn = document.getElementById('delete-empty-btn');
@@ -101,9 +185,13 @@
         const importDataBtn = document.getElementById('import-data-btn');
         const importStatus = document.getElementById('import-status');
 
-        // --- Initialization ---
-        document.addEventListener('DOMContentLoaded', () => {
-            loadNamespaces();
+        document.addEventListener('DOMContentLoaded', async () => {
+            currentLanguage = getPreferredLanguage();
+            await loadTranslations(currentLanguage);
+            translatePage();
+
+            document.getElementById('lang-en').addEventListener('click', () => setLanguage('en'));
+            document.getElementById('lang-fr').addEventListener('click', () => setLanguage('fr'));
 
             refreshBtn.addEventListener('click', loadNamespaces);
             deleteEmptyBtn.addEventListener('click', handleDeleteEmpty);
@@ -112,61 +200,60 @@
             importForm.addEventListener('submit', handleImportData);
         });
 
-        // --- API Interaction ---
-
         async function fetchNamespaces() {
-            setStatusMessage('Loading namespaces...', false);
+            setStatusMessage('statusLoadingNamespaces', false);
             try {
-                const response = await fetch(`${apiUrlBase}/namespaces`); // GET is default
+                const response = await fetch(`${apiUrlBase}/namespaces`);
                 if (response.status === 401) {
-                     throw new Error('Unauthorized. Please refresh and login.');
+                    throw new Error(t('unauthorizedError'));
                 }
                 if (!response.ok) {
-                    const errorData = await response.text(); // Use text for potential non-JSON errors
+                    const errorData = await response.text();
                     throw new Error(`Failed to fetch namespaces: ${response.status} ${response.statusText} - ${errorData}`);
                 }
                 return await response.json();
             } catch (error) {
                 console.error('Error fetching namespaces:', error);
-                setStatusMessage(`Error loading namespaces: ${error.message}`, true);
-                return null; // Indicate failure
+                setStatusMessage('statusErrorLoadingNamespaces', true, { message: error.message });
+                return null;
             }
         }
 
         async function loadNamespaces() {
-            namespaceListBody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-gray-500">Loading namespaces...</td></tr>'; // Clear and show loading
+            namespaceListBody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-gray-500">${t('tableLoading')}</td></tr>`;
             const namespaces = await fetchNamespaces();
 
             if (namespaces === null) {
-                namespaceListBody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-red-500">Failed to load namespaces. Check console.</td></tr>';
-                return; // Stop if fetch failed
+                namespaceListBody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-red-500">${t('tableFailedLoad')}</td></tr>`;
+                return;
             }
 
-            namespaceListBody.innerHTML = ''; // Clear loading message
+            namespaceListBody.innerHTML = '';
 
             if (namespaces.length === 0) {
-                namespaceListBody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-gray-500">No namespaces found.</td></tr>';
-                setStatusMessage('No namespaces found.', false);
+                namespaceListBody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-gray-500">${t('tableNoNamespaces')}</td></tr>`;
+                setStatusMessage('tableNoNamespaces', false);
             } else {
                 namespaces.forEach(ns => {
                     const row = createNamespaceRow(ns);
                     namespaceListBody.appendChild(row);
                 });
-                setStatusMessage(`Loaded ${namespaces.length} namespaces.`, false);
+                setStatusMessage('statusLoadedNamespaces', false, { count: namespaces.length });
             }
+            translatePage();
         }
 
         function createNamespaceRow(ns) {
             const tr = document.createElement('tr');
             tr.className = 'hover:bg-gray-50';
-            const baseAppUrl = window.location.origin + '/'; // Base URL for the main app
+            const baseAppUrl = window.location.origin + '/';
 
             if (ns.error) {
                 tr.innerHTML = `
                     <td class="py-2 px-4 border-b">${ns.id}</td>
-                    <td class="py-2 px-4 border-b text-red-500" colspan="6">Error: ${ns.error}</td>
+                    <td class="py-2 px-4 border-b text-red-500" colspan="6">${t('tableErrorRow', { error: ns.error })}</td>
                     <td class="py-2 px-4 border-b text-center">
-                        <button class="text-red-500 hover:text-red-700 font-semibold" onclick="handleDeleteSingle('${ns.id}')">Delete</button>
+                        <button class="text-red-500 hover:text-red-700 font-semibold" onclick="handleDeleteSingle('${ns.id}')">${t('tableActionDelete')}</button>
                     </td>
                 `;
                 return tr;
@@ -175,10 +262,10 @@
             let createdAtFormatted = 'N/A';
             if (ns.createdAt && ns.createdAt !== 'N/A') {
                 try {
-                    createdAtFormatted = new Date(ns.createdAt).toLocaleString();
+                    createdAtFormatted = new Date(ns.createdAt).toLocaleString(currentLanguage.replace('_', '-'));
                 } catch (e) {
                     console.warn(`Could not parse date: ${ns.createdAt}`);
-                    createdAtFormatted = ns.createdAt; // Show raw string if parsing fails
+                    createdAtFormatted = ns.createdAt;
                 }
             }
 
@@ -191,7 +278,7 @@
             const friendlyUrl = ns.friendlyUrlName ? `${window.location.origin}/v/${ns.friendlyUrlName}` : null;
             const friendlyLinkHtml = friendlyUrl
                 ? `<a href="${friendlyUrl}" target="_blank" class="text-purple-600 hover:underline">${friendlyUrl}</a>`
-                : '<span class="text-gray-400">Not Set</span>';
+                : `<span class="text-gray-400">${t('tableFriendlyUrlNotSet')}</span>`;
 
             tr.innerHTML = `
                 <td class="py-2 px-4 border-b">${ns.id}</td>
@@ -202,122 +289,117 @@
                 <td class="py-2 px-4 border-b">${adminLinkHtml}</td>
                 <td class="py-2 px-4 border-b">${friendlyLinkHtml}</td>
                 <td class="py-2 px-4 border-b text-center">
-                    <button class="text-red-500 hover:text-red-700 font-semibold" onclick="handleDeleteSingle('${ns.id}')">Delete</button>
+                    <button class="text-red-500 hover:text-red-700 font-semibold" onclick="handleDeleteSingle('${ns.id}')">${t('tableActionDelete')}</button>
                 </td>
             `;
             return tr;
         }
 
-        // --- Event Handlers ---
-
         async function handleDeleteSingle(namespaceId) {
-            if (!confirm(`Are you sure you want to delete namespace "${namespaceId}"? This cannot be undone.`)) {
+            if (!confirm(t('confirmDeleteSingleNs', { namespaceId: namespaceId }))) {
                 return;
             }
 
-            setStatusMessage(`Deleting namespace ${namespaceId}...`, false);
+            setStatusMessage('statusDeletingSingleNs', false, { namespaceId: namespaceId });
             try {
                 const response = await fetch(`${apiUrlBase}/namespace/${namespaceId}`, {
                     method: 'DELETE',
                 });
                 if (response.status === 401) {
-                     throw new Error('Unauthorized. Please refresh and login.');
+                    throw new Error(t('unauthorizedError'));
                 }
                 const result = await response.json();
                 if (!response.ok) {
                     throw new Error(result.message || `Failed to delete: ${response.statusText}`);
                 }
-                setStatusMessage(result.message || `Namespace ${namespaceId} deleted.`, false);
+                setStatusMessage('statusDeletedSingleNs', false, { namespaceId: namespaceId });
                 await loadNamespaces();
             } catch (error) {
                 console.error(`Error deleting namespace ${namespaceId}:`, error);
-                setStatusMessage(`Error deleting ${namespaceId}: ${error.message}`, true);
+                setStatusMessage('statusErrorDeletingSingleNs', true, { namespaceId: namespaceId, message: error.message });
             }
         }
 
         async function handleDeleteEmpty() {
-            if (!confirm('Are you sure you want to delete ALL namespaces with ZERO votes? This cannot be undone.')) {
+            if (!confirm(t('confirmDeleteEmptyNs'))) {
                 return;
             }
 
-            setStatusMessage('Deleting empty namespaces...', false);
+            setStatusMessage('statusDeletingEmptyNs', false);
             try {
                 const response = await fetch(`${apiUrlBase}/namespaces/empty`, {
                     method: 'DELETE',
                 });
                 if (response.status === 401) {
-                     throw new Error('Unauthorized. Please refresh and login.');
+                    throw new Error(t('unauthorizedError'));
                 }
                 const result = await response.json();
                 if (!response.ok) {
                      throw new Error(result.message || `Failed to delete empty namespaces: ${response.statusText}`);
                 }
-                setStatusMessage(result.message || 'Finished deleting empty namespaces.', false);
+                setStatusMessage(result.messageKey || 'statusDeletedEmptyNs', false);
                 await loadNamespaces();
             } catch (error) {
                 console.error('Error deleting empty namespaces:', error);
-                setStatusMessage(`Error deleting empty namespaces: ${error.message}`, true);
+                setStatusMessage('statusErrorDeletingEmptyNs', true, { message: error.message });
             }
         }
 
         async function handleDeleteAll() {
-            if (!confirm('WARNING: Are you sure you want to delete ALL namespaces? This will remove all data and cannot be undone.')) {
+            if (!confirm(t('confirmDeleteAllNs'))) {
                 return;
             }
 
-            setStatusMessage('Deleting ALL namespaces...', false);
+            setStatusMessage('statusDeletingAllNs', false);
             try {
                 const response = await fetch(`${apiUrlBase}/namespaces/all`, {
                     method: 'DELETE',
                 });
                 if (response.status === 401) {
-                     throw new Error('Unauthorized. Please refresh and login.');
+                    throw new Error(t('unauthorizedError'));
                 }
                 const result = await response.json();
                 if (!response.ok) {
                      throw new Error(result.message || `Failed to delete all namespaces: ${response.statusText}`);
                 }
-                setStatusMessage(result.message || 'Finished deleting all namespaces.', false);
+                setStatusMessage(result.messageKey || 'statusDeletedAllNs', false);
                 await loadNamespaces();
             } catch (error) {
                 console.error('Error deleting all namespaces:', error);
-                setStatusMessage(`Error deleting all namespaces: ${error.message}`, true);
+                setStatusMessage('statusErrorDeletingAllNs', true, { message: error.message });
             }
         }
 
-        // --- NEW: Export Handler ---
         function handleExportData() {
-            setStatusMessage('Generating export...', false);
+            setStatusMessage('statusGeneratingExport', false);
             window.location.href = `${apiUrlBase}/export`;
             setTimeout(() => {
-                setStatusMessage('Export started. Check your downloads.', false);
+                setStatusMessage('statusExportStarted', false);
             }, 1500);
         }
-        // --- END NEW ---
 
-        // --- NEW: Import Handler ---
         async function handleImportData(event) {
             event.preventDefault();
             if (!importFileInput.files || importFileInput.files.length === 0) {
-                importStatus.textContent = 'Please select a backup file (.zip) to import.';
+                importStatus.textContent = t('importStatusSelectFile');
                 importStatus.className = 'mt-2 text-sm text-yellow-600';
                 return;
             }
 
             const file = importFileInput.files[0];
             if (file.type !== 'application/zip' && file.type !== 'application/x-zip-compressed') {
-                 importStatus.textContent = 'Invalid file type. Please select a .zip file.';
+                 importStatus.textContent = t('importStatusInvalidFile');
                  importStatus.className = 'mt-2 text-sm text-red-600';
                  return;
             }
 
-            if (!confirm('WARNING: Importing will replace all current data. Are you sure you want to proceed?')) {
+            if (!confirm(t('importConfirmWarning'))) {
                 return;
             }
 
-            importStatus.textContent = 'Importing data... This may take a moment. Do not navigate away.';
+            importStatus.textContent = t('importStatusImporting');
             importStatus.className = 'mt-2 text-sm text-blue-600';
-            importDataBtn.disabled = true; // Disable button during import
+            importDataBtn.disabled = true;
 
             const formData = new FormData();
             formData.append('backupFile', file);
@@ -326,11 +408,10 @@
                 const response = await fetch(`${apiUrlBase}/import`, {
                     method: 'POST',
                     body: formData,
-                    // No 'Content-Type' header needed for FormData, browser sets it with boundary
                 });
 
                 if (response.status === 401) {
-                     throw new Error('Unauthorized. Please refresh and login.');
+                     throw new Error(t('unauthorizedError'));
                 }
 
                 const result = await response.json();
@@ -339,25 +420,23 @@
                     throw new Error(result.message || `Import failed: ${response.statusText}`);
                 }
 
-                importStatus.textContent = `Success: ${result.message}`;
+                importStatus.textContent = t('importStatusSuccess', { message: result.message });
                 importStatus.className = 'mt-2 text-sm text-green-600';
-                setStatusMessage('Import successful! Refreshing list...', false);
-                importFileInput.value = ''; // Clear file input
-                await loadNamespaces(); // Refresh the list after successful import
-
+                setStatusMessage('statusImportSuccess', false);
+                importFileInput.value = '';
+                await loadNamespaces();
             } catch (error) {
                 console.error('Import error:', error);
-                importStatus.textContent = `Error: ${error.message}`;
+                importStatus.textContent = t('importStatusError', { message: error.message });
                 importStatus.className = 'mt-2 text-sm text-red-600';
-                setStatusMessage(`Import failed: ${error.message}`, true);
+                setStatusMessage('statusImportFailed', true, { message: error.message });
             } finally {
-                 importDataBtn.disabled = false; // Re-enable button
+                 importDataBtn.disabled = false;
             }
         }
-        // --- END NEW ---
 
-        // --- Utility ---
-        function setStatusMessage(message, isError = false) {
+        function setStatusMessage(messageKey, isError = false, params = {}) {
+            const message = t(messageKey, params);
             statusMessageDiv.textContent = message;
             statusMessageDiv.className = `mb-4 text-center font-medium ${isError ? 'text-red-600' : 'text-green-600'}`;
         }

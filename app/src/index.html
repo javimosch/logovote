@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LogoVote Tool</title>
+    <title data-i18n="appTitle">LogoVote Tool</title>
     <script defer data-domain="choisirlogo.enbauges.fr" src="https://psible.coolify.intrane.fr/js/script.js"></script>
 
     <script src="https://cdn.tailwindcss.com"></script>
@@ -106,73 +106,91 @@
             cursor: pointer;
             z-index: 1001; /* Above the image */
         }
+
+        /* --- NEW: Style for language switcher --- */
+        .lang-switcher a {
+            cursor: pointer;
+            text-decoration: underline;
+            margin: 0 5px;
+        }
+        .lang-switcher a.active {
+            font-weight: bold;
+            text-decoration: none;
+            cursor: default;
+        }
+        /* --- END NEW --- */
     </style>
 </head>
 <body class="bg-gray-100 p-8 font-sans">
 
-    <div class="container mx-auto bg-white p-6 rounded-lg shadow-md">
-        <h1 class="text-3xl font-bold mb-6 text-center text-blue-600">LogoVote Tool</h1>
+            <!-- --- NEW: Language Switcher --- -->
+        <div class="lang-switcher text-right mb-4 text-sm">
+            <a id="lang-en">EN</a> | <a id="lang-fr">FR</a>
+        </div>
+        <!-- --- END NEW --- -->
+        <div class="container mx-auto bg-white p-6 rounded-lg shadow-md">
+        <h1 class="text-3xl font-bold mb-6 text-center text-blue-600" data-i18n="appTitle">LogoVote Tool</h1>
 
         <!-- Namespace Info -->
         <div id="namespace-info" class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded">
-            <h2 class="text-xl font-semibold mb-2">Current Namespace</h2>
+            <h2 class="text-xl font-semibold mb-2" data-i18n="currentNamespace">Current Namespace</h2>
             <p id="current-namespace-id" class="mb-2">Loading...</p>
             <div id="admin-controls-section" class="hidden mt-4 space-y-4">
-                <h3 class="font-semibold text-lg text-red-600">Admin Controls</h3>
+                <h3 class="font-semibold text-lg text-red-600" data-i18n="adminControls">Admin Controls</h3>
                 <div>
-                    <label for="friendly-url-input" class="block text-sm font-medium text-gray-700 mb-1">Friendly URL Name:</label>
+                    <label for="friendly-url-input" class="block text-sm font-medium text-gray-700 mb-1" data-i18n="friendlyUrlLabel">Friendly URL Name:</label>
                     <div class="flex items-center space-x-2">
-                        <input type="text" id="friendly-url-input" placeholder="e.g., my-cool-event" class="flex-grow p-2 border border-gray-300 rounded shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                        <button id="set-friendly-url-btn" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out">Set Name</button>
+                        <input type="text" id="friendly-url-input" data-i18n-placeholder="friendlyUrlPlaceholder" placeholder="e.g., my-cool-event" class="flex-grow p-2 border border-gray-300 rounded shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        <button id="set-friendly-url-btn" data-i18n="setFriendlyUrlBtn" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out">Set Name</button>
                     </div>
-                    <p id="friendly-url-status" class="mt-1 text-sm text-gray-600">Current: <span id="current-friendly-url" class="font-medium">None</span></p>
+                    <p id="friendly-url-status" data-i18n-base="currentFriendlyUrl" class="mt-1 text-sm text-gray-600">Current: <span id="current-friendly-url" class="font-medium">None</span></p>
                 </div>
                 <div>
-                    <button id="clear-votes-btn" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out">Clear All Votes</button>
-                    <button id="delete-namespace-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out">Delete This Namespace</button>
+                    <button id="clear-votes-btn" data-i18n="clearVotesBtn" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out">Clear All Votes</button>
+                    <button id="delete-namespace-btn" data-i18n="deleteNamespaceBtn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out">Delete This Namespace</button>
                 </div>
             </div>
              <div id="namespace-links" class="hidden mt-4 space-y-2">
-                 <h3 class="font-semibold text-lg">Share Links</h3>
-                 <p><strong>Voting Link:</strong> <a id="voting-link" href="#" class="text-blue-500 hover:underline" target="_blank"></a></p>
-                 <p id="friendly-link-p" class="hidden"><strong>Friendly Link:</strong> <a id="friendly-link" href="#" class="text-purple-600 hover:underline" target="_blank"></a></p>
-                 <p><strong>Admin Link:</strong> <a id="admin-link" href="#" class="text-red-500 hover:underline" target="_blank"></a> <span class="text-sm text-gray-600">(Keep this safe!)</span></p>
+                 <h3 class="font-semibold text-lg" data-i18n="shareLinks">Share Links</h3>
+                 <p><strong data-i18n="votingLink">Voting Link:</strong> <a id="voting-link" href="#" class="text-blue-500 hover:underline" target="_blank"></a></p>
+                 <p id="friendly-link-p" class="hidden"><strong data-i18n="friendlyLink">Friendly Link:</strong> <a id="friendly-link" href="#" class="text-purple-600 hover:underline" target="_blank"></a></p>
+                 <p><strong data-i18n="adminLink">Admin Link:</strong> <a id="admin-link" href="#" class="text-red-500 hover:underline" target="_blank"></a> <span class="text-sm text-gray-600" data-i18n="adminLinkNote">(Keep this safe!)</span></p>
              </div>
         </div>
 
         <!-- Create Namespace Section -->
         <div id="create-namespace-section" class="mb-6 text-center">
-             <p id="welcome-message" class="mb-4 text-lg">Welcome! Create a new voting namespace or access an existing one using the URL.</p>
-            <button id="create-namespace-btn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out">Create New Vote Namespace</button>
+             <p id="welcome-message" data-i18n="welcomeMessage" class="mb-4 text-lg">Welcome! Create a new voting namespace or access an existing one using the URL.</p>
+            <button id="create-namespace-btn" data-i18n="createNamespaceBtn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out">Create New Vote Namespace</button>
         </div>
 
         <!-- Upload Section -->
         <div id="upload-section" class="mb-6 hidden">
-            <h2 class="text-xl font-semibold mb-2">Upload New Logo(s)</h2>
+            <h2 class="text-xl font-semibold mb-2" data-i18n="uploadLogosTitle">Upload New Logo(s)</h2>
             <form id="upload-form" class="flex items-center space-x-4">
                 <input type="file" id="logo-file-input" name="logoFiles" accept=".svg,.jpg,.jpeg,.png" required multiple class="block w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 cursor-pointer focus:outline-none">
-                <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out">Upload</button>
+                <button type="submit" data-i18n="uploadBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out">Upload</button>
             </form>
             <p id="upload-status" class="mt-2 text-sm"></p>
         </div>
 
         <!-- Logo Grid -->
         <div id="logo-grid-section" class="hidden">
-            <h2 class="text-xl font-semibold mb-4">Vote on Logos</h2>
+            <h2 class="text-xl font-semibold mb-4" data-i18n="voteOnLogosTitle">Vote on Logos</h2>
             <div id="logo-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 <!-- Logos will be loaded here -->
             </div>
-             <p id="no-logos-message" class="text-center text-gray-500 hidden">No logos uploaded yet for this namespace.</p>
+             <p id="no-logos-message" data-i18n="noLogosMessage" class="text-center text-gray-500 hidden">No logos uploaded yet for this namespace.</p>
         </div>
 
         <!-- Identifier Modal -->
         <div id="identifier-modal" class="modal">
             <div class="modal-content">
                 <span class="close-button" onclick="closeModal()">&times;</span>
-                <h3 class="text-lg font-semibold mb-3">Enter Your Identifier</h3>
-                <p class="text-sm mb-4 text-gray-600">Please provide a unique identifier (e.g., email or phone number). We only use this to count votes and ensure one vote per logo within this namespace. It is stored securely.</p>
-                <input type="text" id="identifier-input" placeholder="Your email or phone" class="w-full p-2 border border-gray-300 rounded mb-4">
-                <button id="submit-identifier-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded w-full transition duration-150 ease-in-out">Submit and Vote</button>
+                <h3 class="text-lg font-semibold mb-3" data-i18n="identifierModalTitle">Enter Your Identifier</h3>
+                <p class="text-sm mb-4 text-gray-600" data-i18n="identifierModalInfo">Please provide a unique identifier (e.g., email or phone number). We only use this to count votes and ensure one vote per logo within this namespace. It is stored securely.</p>
+                <input type="text" id="identifier-input" data-i18n-placeholder="identifierPlaceholder" placeholder="Your email or phone" class="w-full p-2 border border-gray-300 rounded mb-4">
+                <button id="submit-identifier-btn" data-i18n="submitIdentifierBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded w-full transition duration-150 ease-in-out">Submit and Vote</button>
                 <p id="modal-error" class="text-red-500 text-sm mt-2"></p>
             </div>
         </div>
@@ -184,7 +202,7 @@
             <img class="logo-viewer-content" id="logo-viewer-img">
             <button id="logo-viewer-next" class="logo-viewer-nav logo-viewer-next">&#10095;</button>
             <div class="logo-viewer-controls">
-                 <button id="logo-viewer-vote-btn" class="logo-viewer-vote-btn">Vote for this Logo</button>
+                 <button id="logo-viewer-vote-btn" data-i18n="logoViewerVoteBtn" class="logo-viewer-vote-btn">Vote for this Logo</button>
             </div>
         </div>
 
@@ -194,6 +212,110 @@
     </div>
 
     <script>
+        // --- I18N START ---
+        const supportedLanguages = ['en', 'fr'];
+        let currentLanguage = 'en';
+        let translations = {};
+
+        function getPreferredLanguage() {
+            const storedLang = localStorage.getItem('preferredLanguage');
+            if (storedLang && supportedLanguages.includes(storedLang)) {
+                return storedLang;
+            }
+            const browserLang = navigator.language.split('-')[0];
+            return supportedLanguages.includes(browserLang) ? browserLang : 'en';
+        }
+
+        async function loadTranslations(lang) {
+            try {
+                // Assuming locales are served relative to the HTML file's location
+                const response = await fetch(`locales/${lang}.json`);
+                if (!response.ok) {
+                    throw new Error(`Could not load ${lang}.json`);
+                }
+                translations = await response.json();
+                console.log(`Translations loaded for ${lang}`);
+            } catch (error) {
+                console.error('Error loading translations:', error);
+                // Fallback to English if the requested language fails, unless English itself failed
+                if (lang !== 'en') {
+                    console.warn(`Falling back to English translations.`);
+                    await loadTranslations('en');
+                } else {
+                    // If English fails, use keys as fallback
+                    translations = {};
+                }
+            }
+        }
+
+        function t(key, params = {}) {
+            let translation = translations[key] || key; // Fallback to key if not found
+            for (const param in params) {
+                translation = translation.replace(`{${param}}`, params[param]);
+            }
+            return translation;
+        }
+
+        function translatePage() {
+            // Translate elements with data-i18n attribute
+            document.querySelectorAll('[data-i18n]').forEach(element => {
+                const key = element.getAttribute('data-i18n');
+                element.textContent = t(key);
+            });
+            // Translate placeholders
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(element => {
+                const key = element.getAttribute('data-i18n-placeholder');
+                element.placeholder = t(key);
+            });
+            // Translate titles (tooltips)
+            document.querySelectorAll('[data-i18n-title]').forEach(element => {
+                const key = element.getAttribute('data-i18n-title');
+                element.title = t(key);
+            });
+            // Translate elements with data-i18n-base (used for dynamic text like friendly URL status)
+            document.querySelectorAll('[data-i18n-base]').forEach(element => {
+                const key = element.getAttribute('data-i18n-base');
+                const span = element.querySelector('span'); // Find the inner span to update
+                if (span) {
+                    // Reconstruct the text using the translated base and the existing span content
+                    const baseText = t(key, { url: '' }).replace('{url}', ''); // Get base text without placeholder
+                    element.textContent = baseText; // Set base text first
+                    element.appendChild(span); // Re-append the span
+                } else {
+                    element.textContent = t(key);
+                }
+            });
+
+            // Update language switcher active state
+            document.querySelectorAll('.lang-switcher a').forEach(a => {
+                a.classList.remove('active');
+            });
+            const activeLink = document.getElementById(`lang-${currentLanguage}`);
+            if (activeLink) {
+                activeLink.classList.add('active');
+            }
+            // Update HTML lang attribute
+            document.documentElement.lang = currentLanguage;
+        }
+
+        async function setLanguage(lang) {
+            if (!supportedLanguages.includes(lang)) {
+                console.warn(`Unsupported language: ${lang}`);
+                return;
+            }
+            currentLanguage = lang;
+            localStorage.setItem('preferredLanguage', lang);
+            await loadTranslations(lang);
+            translatePage();
+            if (currentNamespaceId) {
+                await loadLogos();
+                const currentStatusText = statusMessage.textContent;
+                if (currentStatusText) {
+                    console.warn("Status message might not be re-translated automatically on language change.");
+                }
+            }
+        }
+        // --- I18N END ---
         const apiUrl = ''; // Assuming backend is running on the same origin
         const logoGrid = document.getElementById('logo-grid');
         const uploadForm = document.getElementById('upload-form');
@@ -245,7 +367,15 @@
         let saveDescriptionDebounceTimers = {}; // Store debounce timers for description saving
 
         // --- Initialization ---
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => { // Make async
+            // --- I18N START ---
+            currentLanguage = getPreferredLanguage();
+            await loadTranslations(currentLanguage);
+            // Attach language switcher listeners
+            document.getElementById('lang-en').addEventListener('click', () => setLanguage('en'));
+            document.getElementById('lang-fr').addEventListener('click', () => setLanguage('fr'));
+            // --- I18N END ---
+        
             const urlParams = new URLSearchParams(window.location.search);
             currentNamespaceId = urlParams.get('namespace');
             currentAdminKey = urlParams.get('admin'); // Might be null
@@ -280,10 +410,19 @@
             logoGridSection.style.display = 'none';
             createNamespaceSection.style.display = 'block';
             welcomeMessage.style.display = 'block';
+            // --- I18N: Translate static elements shown in this view ---
+            translatePage();
+            // --- END I18N ---
         }
 
         async function initializeNamespaceView() {
-            currentNamespaceIdP.textContent = `Namespace ID: ${currentNamespaceId}`;
+            // --- I18N: Translate static elements shown in this view ---
+            // Note: Dynamic text like namespace ID is set below,
+            // and fetched data (logos) will be translated after fetch.
+            translatePage();
+            // --- END I18N ---
+        
+            currentNamespaceIdP.textContent = `Namespace ID: ${currentNamespaceId}`; // Keep this non-translated
             namespaceInfoDiv.style.display = 'block';
             uploadSection.style.display = 'block';
             logoGridSection.style.display = 'block';
@@ -324,7 +463,8 @@
                 if (!response.ok) {
                     // Handle 404 specifically for namespace not found
                     if (response.status === 404) {
-                         setStatusMessage('Error: Namespace not found.', true);
+                              // --- I18N: Use translation key ---
+                         setStatusMessage('statusNamespaceNotFound', true);
                          showWelcomeView(); // Go back to welcome if namespace invalid
                          return null; // Indicate failure clearly
                     }
@@ -333,14 +473,16 @@
                 return await response.json(); // Returns { logos: [], friendlyUrlName: "..." }
             } catch (error) {
                 console.error('Error fetching logos:', error);
-                setStatusMessage(`Error loading logos: ${error.message}`, true);
+                 // --- I18N: Use translation key ---
+                setStatusMessage('statusError', true, { message: `loading logos: ${error.message}` });
                 return null; // Indicate failure
             }
         }
 
         async function loadLogos() {
             if (!currentNamespaceId) return;
-            setStatusMessage('Loading logos...', false);
+            // --- I18N: Use translation key ---
+            setStatusMessage('statusLoadingLogos', false);
             logoGrid.innerHTML = ''; // Clear existing logos
             noLogosMessage.style.display = 'none';
             displayedLogos = []; // Reset logo list
@@ -354,6 +496,9 @@
             }
 
             processLogosResponse(responseData);
+            // --- I18N: Translate newly added logo elements ---
+            translatePage();
+            // --- END I18N ---
             // --- MODIFICATION END ---
         }
 
@@ -462,7 +607,8 @@
                 // adminLinkA.textContent = adminUrl;
                 // namespaceLinksDiv.style.display = 'block'; // This will be set by initializeNamespaceView
 
-                setStatusMessage('Namespace created! Use the links above.', false);
+                // --- I18N: Use translation key ---
+                setStatusMessage('statusNamespaceCreated', false);
                 // --- MODIFICATION END ---
 
                 // Optionally redirect to the new namespace admin view immediately
@@ -539,7 +685,8 @@
 
             } catch (error) {
                 console.error('Upload error:', error);
-                uploadStatus.textContent = `Error: ${error.message}`;
+                // --- I18N: Use translation key ---
+                uploadStatus.textContent = t('statusUploadError', { message: error.message });
                 uploadStatus.className = 'mt-2 text-sm text-red-500';
             }
         }
@@ -823,6 +970,9 @@
 
             // Update friendly URL display elements after processing
             updateFriendlyUrlDisplay();
+            // --- I18N: Translate elements updated by this function ---
+            translatePage();
+            // --- END I18N ---
         }
         // --- MODIFICATION END ---
 
@@ -842,6 +992,10 @@
              } else {
                  friendlyLinkP.style.display = 'none';
              }
+             // --- I18N: Translate elements updated by this function ---
+             // (Specifically the 'Current: {url}' part)
+             translatePage();
+             // --- END I18N ---
         }
         // --- MODIFICATION END ---
 
@@ -852,7 +1006,9 @@
             const desiredName = friendlyUrlInput.value; // Get value from input
 
             setStatusMessage('Setting friendly URL...', false);
-            friendlyUrlStatus.textContent = 'Updating...'; // Use the specific status P tag
+            // --- I18N: Use translation key ---
+            friendlyUrlStatus.textContent = t('loading'); // Indicate updating
+            friendlyUrlStatus.className = 'mt-1 text-sm text-gray-600';
 
             try {
                 const response = await fetch(`${apiUrl}/namespace/friendly-url?namespace=${currentNamespaceId}&admin=${currentAdminKey}`, {
@@ -868,7 +1024,8 @@
                 if (!response.ok) {
                     // Handle specific conflict error
                     if (response.status === 409) {
-                         friendlyUrlStatus.textContent = `Error: ${result.message}`;
+                         const errorMessage = result.message || 'Failed to set friendly URL.';
+                         friendlyUrlStatus.textContent = t('statusFriendlyUrlError', { message: errorMessage });
                          friendlyUrlStatus.className = 'mt-1 text-sm text-red-600';
                     } else {
                         throw new Error(result.message || `Failed to set friendly URL: ${response.statusText}`);
