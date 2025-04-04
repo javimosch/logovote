@@ -62,6 +62,47 @@ async function validateAdminKey(namespaceId, adminKey) {
     return data && data.adminKey === adminKey;
 }
 
+// Delete namespace files (JSON and uploads)
+async function deleteNamespaceFiles(namespaceId) {
+    const namespaceJsonPath = getNamespaceFilePath(namespaceId);
+    const namespaceUploadDir = path.join(UPLOADS_DIR, namespaceId);
+    let success = true; // Assume success initially
+
+    console.log(`Attempting to delete files for namespace: ${namespaceId}`);
+
+    // 1. Delete the namespace JSON file
+    try {
+        await fs.unlink(namespaceJsonPath);
+        console.log(`Deleted namespace JSON: ${namespaceJsonPath}`);
+    } catch (error) {
+        if (error.code === 'ENOENT') {
+            console.log(`Namespace JSON not found (already deleted?): ${namespaceJsonPath}`);
+            // Don't mark as failure if file doesn't exist
+        } else {
+            console.error(`Error deleting namespace JSON ${namespaceJsonPath}:`, error);
+            success = false; // Mark as failure on other errors
+        }
+    }
+
+    // 2. Delete the namespace upload directory
+    try {
+        // Check if directory exists before attempting to remove
+        await fs.access(namespaceUploadDir); // Throws error if doesn't exist
+        await fs.rm(namespaceUploadDir, { recursive: true, force: true }); // Use force to handle potential issues
+        console.log(`Deleted namespace upload directory: ${namespaceUploadDir}`);
+    } catch (error) {
+        if (error.code === 'ENOENT') {
+            console.log(`Namespace upload directory not found (already deleted or never existed?): ${namespaceUploadDir}`);
+            // Don't mark as failure if directory doesn't exist
+        } else {
+            console.error(`Error deleting namespace upload directory ${namespaceUploadDir}:`, error);
+            success = false; // Mark as failure on other errors
+        }
+    }
+
+    return success;
+}
+
 //serve index.html at /
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
@@ -379,7 +420,7 @@ app.delete('/namespace', async (req, res) => {
 
 // --- Cron Job for Pruning Old, Empty Namespaces ---
 // Schedule to run once daily at midnight ('0 0 * * *')
-// For testing, you might use '*/5 * * * * *' (every 5 seconds) or '0 * * * *' (every hour)
+// For testing, you might use '*/5 * * * *' (every 5 seconds) or '0 * * * *' (every hour)
 cron.schedule('0 0 * * *', async () => {
     console.log('[Cron] Running job to prune old, empty namespaces...');
     const thirtyDaysAgo = new Date();
