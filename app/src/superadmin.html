@@ -9,6 +9,32 @@
         /* Ensure table layout handles long links */
         table { table-layout: fixed; word-wrap: break-word; }
         th, td { padding: 8px 4px; } /* Adjust padding */
+
+        /* Style for file input */
+        input[type="file"] {
+            display: block;
+            width: 100%;
+            padding: 0.5rem;
+            margin-top: 0.5rem;
+            border: 1px solid #d1d5db; /* gray-300 */
+            border-radius: 0.375rem; /* rounded-md */
+            background-color: #f9fafb; /* gray-50 */
+            cursor: pointer;
+        }
+        input[type="file"]::file-selector-button {
+            padding: 0.5rem 1rem;
+            margin-right: 0.5rem;
+            border: none;
+            border-radius: 0.375rem;
+            background-color: #4f46e5; /* indigo-600 */
+            color: white;
+            font-weight: 600; /* font-semibold */
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        input[type="file"]::file-selector-button:hover {
+            background-color: #4338ca; /* indigo-700 */
+        }
     </style>
 </head>
 <body class="bg-gray-100 p-8 font-sans">
@@ -17,10 +43,11 @@
         <h1 class="text-3xl font-bold mb-6 text-center text-red-600">LogoVote Superadmin</h1>
 
         <!-- Action Buttons -->
-        <div class="mb-6 flex space-x-4">
+        <div class="mb-6 flex flex-wrap gap-4"> <!-- Use flex-wrap and gap -->
             <button id="refresh-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out">Refresh List</button>
             <button id="delete-empty-btn" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out">Delete Empty Namespaces</button>
             <button id="delete-all-btn" class="bg-red-700 hover:bg-red-800 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out">Delete ALL Namespaces</button>
+            <button id="export-data-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out">Export Data</button>
         </div>
 
         <!-- Status Message Area -->
@@ -57,6 +84,11 @@
         const deleteEmptyBtn = document.getElementById('delete-empty-btn');
         const deleteAllBtn = document.getElementById('delete-all-btn');
         const statusMessageDiv = document.getElementById('status-message');
+        const exportDataBtn = document.getElementById('export-data-btn');
+        const importForm = document.getElementById('import-form');
+        const importFileInput = document.getElementById('import-file-input');
+        const importDataBtn = document.getElementById('import-data-btn');
+        const importStatus = document.getElementById('import-status');
 
         // --- Initialization ---
         document.addEventListener('DOMContentLoaded', () => {
@@ -65,6 +97,8 @@
             refreshBtn.addEventListener('click', loadNamespaces);
             deleteEmptyBtn.addEventListener('click', handleDeleteEmpty);
             deleteAllBtn.addEventListener('click', handleDeleteAll);
+            exportDataBtn.addEventListener('click', handleExportData);
+            importForm.addEventListener('submit', handleImportData);
         });
 
         // --- API Interaction ---
@@ -239,6 +273,77 @@
                 setStatusMessage(`Error deleting all namespaces: ${error.message}`, true);
             }
         }
+
+        // --- NEW: Export Handler ---
+        function handleExportData() {
+            setStatusMessage('Generating export...', false);
+            window.location.href = `${apiUrlBase}/export`;
+            setTimeout(() => {
+                setStatusMessage('Export started. Check your downloads.', false);
+            }, 1500);
+        }
+        // --- END NEW ---
+
+        // --- NEW: Import Handler ---
+        async function handleImportData(event) {
+            event.preventDefault();
+            if (!importFileInput.files || importFileInput.files.length === 0) {
+                importStatus.textContent = 'Please select a backup file (.zip) to import.';
+                importStatus.className = 'mt-2 text-sm text-yellow-600';
+                return;
+            }
+
+            const file = importFileInput.files[0];
+            if (file.type !== 'application/zip' && file.type !== 'application/x-zip-compressed') {
+                 importStatus.textContent = 'Invalid file type. Please select a .zip file.';
+                 importStatus.className = 'mt-2 text-sm text-red-600';
+                 return;
+            }
+
+            if (!confirm('WARNING: Importing will replace all current data. Are you sure you want to proceed?')) {
+                return;
+            }
+
+            importStatus.textContent = 'Importing data... This may take a moment. Do not navigate away.';
+            importStatus.className = 'mt-2 text-sm text-blue-600';
+            importDataBtn.disabled = true; // Disable button during import
+
+            const formData = new FormData();
+            formData.append('backupFile', file);
+
+            try {
+                const response = await fetch(`${apiUrlBase}/import`, {
+                    method: 'POST',
+                    body: formData,
+                    // No 'Content-Type' header needed for FormData, browser sets it with boundary
+                });
+
+                if (response.status === 401) {
+                     throw new Error('Unauthorized. Please refresh and login.');
+                }
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.message || `Import failed: ${response.statusText}`);
+                }
+
+                importStatus.textContent = `Success: ${result.message}`;
+                importStatus.className = 'mt-2 text-sm text-green-600';
+                setStatusMessage('Import successful! Refreshing list...', false);
+                importFileInput.value = ''; // Clear file input
+                await loadNamespaces(); // Refresh the list after successful import
+
+            } catch (error) {
+                console.error('Import error:', error);
+                importStatus.textContent = `Error: ${error.message}`;
+                importStatus.className = 'mt-2 text-sm text-red-600';
+                setStatusMessage(`Import failed: ${error.message}`, true);
+            } finally {
+                 importDataBtn.disabled = false; // Re-enable button
+            }
+        }
+        // --- END NEW ---
 
         // --- Utility ---
         function setStatusMessage(message, isError = false) {

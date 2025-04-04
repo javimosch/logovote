@@ -2,7 +2,7 @@
 
 ## Overview
 
-This project is a simple voting application called "Logovote". Users can vote on logos within different namespaces. It also includes a superadmin interface for managing namespaces.
+This project is a simple voting application called "Logovote". Users can vote on logos within different namespaces. It also includes a superadmin interface for managing namespaces and data.
 
 ## Tech Stack
 
@@ -11,7 +11,7 @@ This project is a simple voting application called "Logovote". Users can vote on
 - Data Storage: Filesystem (JSON files in `app/data/`)
 - Containerization: Docker
 - Authentication: Basic Auth (for superadmin)
-- Dependencies: `express`, `multer`, `uuid`, `node-cron`, `express-basic-auth`, `dotenv`
+- Dependencies: `express`, `multer`, `uuid`, `node-cron`, `express-basic-auth`, `dotenv`, `archiver`, `unzipper`
 
 ## Running the Project
 
@@ -29,7 +29,7 @@ This project is a simple voting application called "Logovote". Users can vote on
 ## Key Directories
 
 - `app/`: Contains the application code (server and client).
-- `app/data/`: Stores voting data for each namespace (mounted via Docker volume).
+- `app/data/`: Stores voting data (`namespaces/`) and uploaded logos (`uploads/`) (mounted via Docker volume).
 - `.env`: Stores environment variables like superadmin credentials (ensure this is in `.gitignore`).
 
 ## Key Endpoints
@@ -42,8 +42,14 @@ This project is a simple voting application called "Logovote". Users can vote on
 - `/logo`: (DELETE) Delete a specific logo (requires namespace admin key).
 - `/clear-votes`: (POST) Clear all votes in a namespace (requires namespace admin key).
 - `/namespace`: (DELETE) Delete an entire namespace (requires namespace admin key).
+- `/namespace/friendly-url`: (POST) Set a friendly URL name for a namespace (requires admin key).
+- `/logo/description`: (POST) Set the description for a logo (requires admin key).
+- `/v/:friendlyUrlName`: (GET) Redirects to a namespace via its friendly URL.
 - `/superadmin/*`: Endpoints for overall namespace management (requires Basic Auth defined in `.env`).
+    - `GET /superadmin`: Serves the superadmin UI (`superadmin.html`).
     - `GET /superadmin/namespaces`: List all namespaces.
     - `DELETE /superadmin/namespace/:id`: Delete a specific namespace.
     - `DELETE /superadmin/namespaces/all`: Delete all namespaces.
     - `DELETE /superadmin/namespaces/empty`: Delete namespaces with zero votes.
+    - `GET /superadmin/export`: Downloads a zip archive of all `data/namespaces` and `data/uploads`.
+    - `POST /superadmin/import`: Uploads a zip archive to replace existing data (clears existing data first).

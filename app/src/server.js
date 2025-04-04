@@ -4,6 +4,10 @@ require('dotenv').config();
 const express = require('express');
 const multer = require('multer');
 const fs = require('fs').promises;
+const fsSync = require('fs');
+const archiver = require('archiver');
+const unzipper = require('unzipper');
+const os = require('os');
 
 const { v4: uuidv4 } = require('uuid');
 const cron = require('node-cron');
@@ -229,6 +233,19 @@ const upload = multer({
     limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit per file
     fileFilter: fileFilter
 }).array('logoFiles', MAX_FILES_UPLOAD); // Expecting an array of files named 'logoFiles'
+
+// --- Multer setup for Superadmin Import ---
+const importUpload = multer({
+    dest: os.tmpdir(), // Use OS temporary directory for uploads
+    limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit for zip file
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype === 'application/zip' || file.mimetype === 'application/x-zip-compressed') {
+            cb(null, true);
+        } else {
+            cb(new Error('Invalid file type. Only ZIP files are allowed.'), false);
+        }
+    }
+}).single('backupFile'); // Expecting a single file named 'backupFile'
 
 // --- API Endpoints ---
 
@@ -674,6 +691,77 @@ app.get('/superadmin', superadminAuthMiddleware, (req, res) => {
 });
 // --- MODIFICATION END ---
 
+// --- NEW ENDPOINT: Export Data ---
+superadminRouter.get('/export', async (req, res) => {
+    console.log('Superadmin: Received request to export data.');
+    const now = new Date();
+    const timestamp = now.toISOString().replace(/[:\-T]/g, '').split('.')[0]; // YYYYMMDDHHMMSS
+    const filename = `logovote_backup_${timestamp}.zip`;
+
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+    const archive = archiver('zip', {
+        zlib: { level: 9 } // Sets the compression level.
+    });
+
+    // Handle errors during archiving
+    archive.on('warning', function(err) {
+        if (err.code === 'ENOENT') {
+            console.warn('Archiver warning:', err);
+        } else {
+            console.error('Archiver error:', err);
+            // Cannot set headers after they are sent, so just log
+        }
+    });
+    archive.on('error', function(err) {
+        console.error('Archiver fatal error:', err);
+        // Attempt to send an error response if headers not sent
+        if (!res.headersSent) {
+            res.status(500).send({ error: 'Failed to create archive.', details: err.message });
+        } else {
+            // If headers are sent, the stream might be corrupted, try ending it
+            res.end();
+        }
+    });
+
+    // Pipe archive data to the response
+    archive.pipe(res);
+
+    // Add namespaces directory
+    // Check if directory exists before adding
+    try {
+        await fs.access(NAMESPACES_DIR);
+        archive.directory(NAMESPACES_DIR, 'namespaces');
+        console.log(`Superadmin Export: Added directory ${NAMESPACES_DIR} as 'namespaces'`);
+    } catch (err) {
+        if (err.code === 'ENOENT') {
+            console.log(`Superadmin Export: Directory ${NAMESPACES_DIR} not found, skipping.`);
+        } else {
+            console.error(`Superadmin Export: Error accessing ${NAMESPACES_DIR}:`, err);
+            // Optionally, you could stop the archive process here if this is critical
+        }
+    }
+
+    // Add uploads directory
+    try {
+        await fs.access(UPLOADS_DIR);
+        archive.directory(UPLOADS_DIR, 'uploads');
+        console.log(`Superadmin Export: Added directory ${UPLOADS_DIR} as 'uploads'`);
+    } catch (err) {
+        if (err.code === 'ENOENT') {
+            console.log(`Superadmin Export: Directory ${UPLOADS_DIR} not found, skipping.`);
+        } else {
+            console.error(`Superadmin Export: Error accessing ${UPLOADS_DIR}:`, err);
+        }
+    }
+
+    // Finalize the archive (triggers the actual zipping and sending)
+    await archive.finalize();
+    console.log('Superadmin Export: Archive finalized and sent.');
+});
+// --- END NEW ENDPOINT ---
+
 // GET /superadmin/namespaces - List all namespaces (API)
 superadminRouter.get('/namespaces', async (req, res) => {
     try {
@@ -815,6 +903,89 @@ superadminRouter.delete('/namespaces/empty', async (req, res) => {
         res.status(500).json({ message: 'Failed to list namespaces for empty deletion.' });
     }
 });
+
+// --- NEW ENDPOINT: Import Data ---
+superadminRouter.post('/import', (req, res) => {
+    console.log('Superadmin: Received request to import data.');
+
+    importUpload(req, res, async (err) => {
+        if (err instanceof multer.MulterError) {
+            console.error('Superadmin Import - Multer error:', err);
+            return res.status(400).json({ message: `Import upload error: ${err.message}` });
+        } else if (err) {
+            console.error('Superadmin Import - Unknown upload error:', err);
+            return res.status(400).json({ message: `Import error: ${err.message}` });
+        }
+
+        if (!req.file) {
+            return res.status(400).json({ message: 'No backup file uploaded.' });
+        }
+
+        const zipFilePath = req.file.path;
+        console.log(`Superadmin Import: Backup file uploaded to ${zipFilePath}`);
+
+        try {
+            // --- Critical Section: Data Replacement ---
+            console.log('Superadmin Import: Clearing existing data...');
+
+            // 1. Clear existing namespaces directory
+            try {
+                await fs.rm(NAMESPACES_DIR, { recursive: true, force: true });
+                console.log(`Superadmin Import: Cleared directory ${NAMESPACES_DIR}`);
+            } catch (clearErr) {
+                 if (clearErr.code !== 'ENOENT') { // Ignore if dir doesn't exist
+                     throw new Error(`Failed to clear existing namespaces: ${clearErr.message}`);
+                 }
+                 console.log(`Superadmin Import: Directory ${NAMESPACES_DIR} did not exist, skipping clear.`);
+            }
+
+            // 2. Clear existing uploads directory
+            try {
+                await fs.rm(UPLOADS_DIR, { recursive: true, force: true });
+                console.log(`Superadmin Import: Cleared directory ${UPLOADS_DIR}`);
+            } catch (clearErr) {
+                 if (clearErr.code !== 'ENOENT') { // Ignore if dir doesn't exist
+                     throw new Error(`Failed to clear existing uploads: ${clearErr.message}`);
+                 }
+                 console.log(`Superadmin Import: Directory ${UPLOADS_DIR} did not exist, skipping clear.`);
+            }
+
+            // 3. Ensure data directories exist again
+            await ensureDataDirs();
+            console.log('Superadmin Import: Recreated data directories.');
+
+            // 4. Extract the zip file contents into DATA_DIR
+            console.log(`Superadmin Import: Extracting ${zipFilePath} to ${DATA_DIR}...`);
+            await fsSync.createReadStream(zipFilePath)
+                .pipe(unzipper.Extract({ path: DATA_DIR }))
+                .promise(); // Use .promise() for async/await compatibility
+
+            console.log('Superadmin Import: Extraction complete.');
+
+            // 5. Reload the friendly URL map
+            console.log('Superadmin Import: Reloading friendly URL map...');
+            await loadFriendlyUrlMap(); // Reload map after import
+
+            // --- End Critical Section ---
+
+            res.status(200).json({ message: 'Data imported successfully. Friendly URL map reloaded.' });
+
+        } catch (importError) {
+            console.error('Superadmin Import: Error during import process:', importError);
+            res.status(500).json({ message: `Import failed: ${importError.message}` });
+            // Consider attempting to restore from a temporary backup if implemented
+        } finally {
+            // Clean up the uploaded zip file
+            try {
+                await fs.unlink(zipFilePath);
+                console.log(`Superadmin Import: Cleaned up temporary file ${zipFilePath}`);
+            } catch (cleanupError) {
+                console.error(`Superadmin Import: Failed to clean up temporary file ${zipFilePath}:`, cleanupError);
+            }
+        }
+    });
+});
+// --- END NEW ENDPOINT ---
 
 // Mount the superadmin API router under /superadmin path, applying auth
 if (superadminUser && superadminPassword) {
