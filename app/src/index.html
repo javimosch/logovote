@@ -240,6 +240,7 @@
         let displayedLogos = []; // To store the current list of logos
         let currentLogoIndex = -1; // Index of the logo currently shown in the viewer
         let currentFriendlyUrlName = null; // Store current friendly name
+        let saveDescriptionDebounceTimers = {}; // Store debounce timers for description saving
 
         // --- Initialization ---
         document.addEventListener('DOMContentLoaded', () => {
@@ -356,7 +357,7 @@
 
         function createLogoElement(logo, index) { // Accept index
             const div = document.createElement('div');
-            div.className = 'bg-white p-4 rounded-lg shadow hover:shadow-lg transition-shadow duration-200 ease-in-out relative';
+            div.className = 'bg-white p-4 rounded-lg shadow hover:shadow-lg transition-shadow duration-200 ease-in-out relative flex flex-col'; // Added flex flex-col
 
             const img = document.createElement('img');
             const imgSrc = `${apiUrl}/data/uploads/${logo.path}`;
@@ -367,25 +368,61 @@
 
             const voteCount = document.createElement('p');
             voteCount.textContent = `Votes: ${logo.votes}`;
-            voteCount.className = 'text-center text-lg font-semibold mb-3';
+            voteCount.className = 'text-center text-lg font-semibold mb-2'; // Reduced margin bottom
             voteCount.id = `votes-${logo.id}`;
+
+            // --- MODIFICATION: Add Description Display/Edit ---
+            const descriptionContainer = document.createElement('div');
+            descriptionContainer.className = 'mt-2 mb-3 flex-grow'; // Added flex-grow
+
+            const descriptionDisplay = document.createElement('p');
+            descriptionDisplay.id = `desc-display-${logo.id}`;
+            descriptionDisplay.textContent = logo.description || 'No description yet.'; // Display current description
+            descriptionDisplay.className = `text-sm text-gray-600 ${isAdmin ? 'hidden' : ''}`; // Hide if admin
+
+            descriptionContainer.appendChild(descriptionDisplay);
+
+            if (isAdmin) {
+                const descriptionInput = document.createElement('textarea'); // Use textarea for potentially longer text
+                descriptionInput.id = `desc-input-${logo.id}`;
+                descriptionInput.value = logo.description || '';
+                descriptionInput.placeholder = "Enter description...";
+                descriptionInput.rows = 2; // Start with 2 rows
+                descriptionInput.className = 'w-full p-1 border border-gray-300 rounded text-sm mb-1'; // Added mb-1
+                // Add input event listener for debounced saving
+                descriptionInput.addEventListener('input', () => handleDescriptionInput(logo.id));
+
+                const descriptionStatus = document.createElement('p');
+                descriptionStatus.id = `desc-status-${logo.id}`;
+                descriptionStatus.className = 'text-xs text-gray-500 h-4'; // Height to prevent layout shift
+
+                descriptionContainer.appendChild(descriptionInput);
+                descriptionContainer.appendChild(descriptionStatus);
+            }
+            // --- END MODIFICATION ---
 
             const voteButton = document.createElement('button');
             voteButton.textContent = 'Vote';
-            voteButton.className = 'w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out';
-            voteButton.onclick = () => handleVoteClick(logo.id); // Grid vote button still uses ID directly
+            voteButton.className = 'w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out mt-auto'; // Added mt-auto
+            voteButton.onclick = () => handleVoteClick(logo.id);
 
             div.appendChild(img);
-            div.appendChild(voteCount);
+            // --- MODIFICATION: Append description container ---
+            div.appendChild(descriptionContainer);
+            // --- END MODIFICATION ---
+            div.appendChild(voteCount); // Moved vote count below description
             div.appendChild(voteButton);
 
             // Add delete button for admin
             if (isAdmin) {
                 const deleteButton = document.createElement('button');
                 deleteButton.innerHTML = '&times;'; // 'X' symbol
-                deleteButton.className = 'absolute top-1 right-1 bg-red-500 hover:bg-red-700 text-white font-bold h-6 w-6 rounded-full flex items-center justify-center text-xs';
+                deleteButton.className = 'absolute top-1 right-1 bg-red-500 hover:bg-red-700 text-white font-bold h-6 w-6 rounded-full flex items-center justify-center text-xs z-10'; // Added z-index
                 deleteButton.title = 'Delete Logo';
-                deleteButton.onclick = () => handleDeleteLogo(logo.id);
+                deleteButton.onclick = (e) => {
+                    e.stopPropagation(); // Prevent triggering image click
+                    handleDeleteLogo(logo.id);
+                };
                 div.appendChild(deleteButton);
             }
 
@@ -762,14 +799,20 @@
              const logos = responseData.logos || [];
              currentFriendlyUrlName = responseData.friendlyUrlName || null; // Update global state
 
-             displayedLogos = logos; // Store fetched logos
+             // --- MODIFICATION: Ensure description is part of the logo object ---
+             displayedLogos = logos.map(logo => ({
+                 ...logo,
+                 description: logo.description || "" // Ensure description exists
+             }));
+             // --- END MODIFICATION ---
 
              if (logos.length === 0) {
                 noLogosMessage.style.display = 'block';
                  setStatusMessage('', false);
             } else {
                  noLogosMessage.style.display = 'none';
-                logos.forEach((logo, index) => {
+                 logoGrid.innerHTML = ''; // Clear grid before adding new elements
+                displayedLogos.forEach((logo, index) => { // Use updated displayedLogos
                     const logoElement = createLogoElement(logo, index);
                     logoGrid.appendChild(logoElement);
                 });
@@ -845,6 +888,83 @@
             }
         }
         // --- MODIFICATION END ---
+
+        // --- MODIFICATION START: Add Description Input Handler (Debounced Save) ---
+        function handleDescriptionInput(logoId) {
+            const statusElement = document.getElementById(`desc-status-${logoId}`);
+            if (statusElement) {
+                statusElement.textContent = 'Saving...';
+                statusElement.className = 'text-xs text-blue-600 h-4';
+            }
+
+            // Clear existing timer for this logoId
+            if (saveDescriptionDebounceTimers[logoId]) {
+                clearTimeout(saveDescriptionDebounceTimers[logoId]);
+            }
+
+            // Set a new timer
+            saveDescriptionDebounceTimers[logoId] = setTimeout(() => {
+                handleSaveDescription(logoId);
+            }, 1500); // Debounce time: 1.5 seconds
+        }
+        // --- END MODIFICATION ---
+
+        // --- MODIFICATION START: Add Save Description Handler ---
+        async function handleSaveDescription(logoId) {
+            if (!isAdmin || !currentAdminKey || !currentNamespaceId) return;
+
+            const inputElement = document.getElementById(`desc-input-${logoId}`);
+            const statusElement = document.getElementById(`desc-status-${logoId}`);
+            const description = inputElement ? inputElement.value : '';
+
+            // No need for setStatusMessage here, use the local status element
+            if (statusElement) {
+                 statusElement.textContent = 'Saving...';
+                 statusElement.className = 'text-xs text-blue-600 h-4';
+            }
+
+            try {
+                const response = await fetch(`${apiUrl}/logo/description?namespace=${currentNamespaceId}&logoId=${logoId}&admin=${currentAdminKey}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ description: description }),
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.message || `Failed to save description: ${response.statusText}`);
+                }
+
+                if (statusElement) {
+                    statusElement.textContent = 'Saved!';
+                    statusElement.className = 'text-xs text-green-600 h-4';
+                    // Optionally clear the 'Saved!' message after a delay
+                    setTimeout(() => {
+                         if (statusElement.textContent === 'Saved!') {
+                             statusElement.textContent = '';
+                         }
+                    }, 3000);
+                }
+                // Update the internal data store if needed (optional, as loadLogos refetches)
+                const logoIndex = displayedLogos.findIndex(l => l.id === logoId);
+                if (logoIndex !== -1) {
+                    displayedLogos[logoIndex].description = result.description;
+                }
+
+            } catch (error) {
+                console.error('Error saving description:', error);
+                if (statusElement) {
+                    statusElement.textContent = `Error: ${error.message}`;
+                    statusElement.className = 'text-xs text-red-600 h-4';
+                }
+                // Use general status message for broader errors
+                setStatusMessage(`Error saving description for logo ${logoId}: ${error.message}`, true);
+            }
+        }
+        // --- END MODIFICATION ---
 
     </script>
 </body>

@@ -315,7 +315,8 @@ app.get('/logos', async (req, res) => {
         const logosResponse = data.logos.map(logo => ({
             id: logo.id,
             path: logo.path,
-            votes: logo.votes.length
+            votes: logo.votes.length,
+            description: logo.description || "" // Return description, default to empty string
         }));
         res.json({
             logos: logosResponse,
@@ -379,7 +380,8 @@ app.post('/upload', (req, res) => {
                 const newLogo = {
                     id: logoId,
                     path: relativePath,
-                    votes: []
+                    votes: [],
+                    description: "" // Initialize description as empty
                 };
 
                 data.logos.push(newLogo);
@@ -466,6 +468,50 @@ app.post('/vote', async (req, res) => {
 });
 
 // --- Admin Endpoints ---
+
+// --- NEW ENDPOINT: Update Logo Description ---
+app.post('/logo/description', async (req, res) => {
+    const { namespace, logoId, admin } = req.query;
+    const { description } = req.body;
+
+    if (!namespace || !logoId || !admin) {
+        return res.status(400).json({ message: 'Namespace ID, Logo ID, and Admin Key are required query parameters.' });
+    }
+    if (description === undefined || typeof description !== 'string') {
+        return res.status(400).json({ message: 'Description (string) is required in the request body.' });
+    }
+
+    try {
+        const isAdmin = await validateAdminKey(namespace, admin);
+        if (!isAdmin) {
+            return res.status(403).json({ message: 'Invalid Admin Key.' });
+        }
+
+        const data = await readNamespaceData(namespace);
+        if (!data) {
+            return res.status(404).json({ message: 'Namespace not found.' });
+        }
+
+        const logo = data.logos.find(l => l.id === logoId);
+        if (!logo) {
+            return res.status(404).json({ message: 'Logo not found.' });
+        }
+
+        logo.description = description.trim();
+
+        await writeNamespaceData(namespace, data);
+
+        console.log(`Description updated for logo ${logoId} in namespace ${namespace}`);
+        res.status(200).json({ message: 'Description updated successfully.', description: logo.description });
+    } catch (error) {
+        console.error(`Error updating description for logo ${logoId} in namespace ${namespace}:`, error);
+        if (error.message.includes('Could not read') || error.message.includes('Could not write')) {
+             res.status(500).json({ message: 'Server error reading or writing namespace data.' });
+        } else {
+             res.status(500).json({ message: 'Failed to update description due to an unexpected server error.' });
+        }
+    }
+});
 
 // DELETE /logo?namespace=[id]&logoId=[logo-id]&admin=[key] - Delete a logo
 app.delete('/logo', async (req, res) => {
