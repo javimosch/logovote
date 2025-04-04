@@ -31,18 +31,19 @@
             <table class="min-w-full w-full bg-white border border-gray-300">
                 <thead class="bg-gray-200">
                     <tr>
-                        <th class="py-2 px-4 border-b text-left w-1/6">Namespace ID</th>
-                        <th class="py-2 px-4 border-b text-left w-1/6">Created At</th>
-                        <th class="py-2 px-4 border-b text-right w-[10%]">Logos</th>
-                        <th class="py-2 px-4 border-b text-right w-[10%]">Votes</th>
-                        <th class="py-2 px-4 border-b text-left w-1/4">Public Link</th>
-                        <th class="py-2 px-4 border-b text-left w-1/4">Admin Link</th>
+                        <th class="py-2 px-4 border-b text-left w-[15%]">Namespace ID</th>
+                        <th class="py-2 px-4 border-b text-left w-[15%]">Created At</th>
+                        <th class="py-2 px-4 border-b text-right w-[8%]">Logos</th>
+                        <th class="py-2 px-4 border-b text-right w-[8%]">Votes</th>
+                        <th class="py-2 px-4 border-b text-left w-[20%]">Public Link</th>
+                        <th class="py-2 px-4 border-b text-left w-[20%]">Admin Link</th>
+                        <th class="py-2 px-4 border-b text-left w-[14%]">Friendly URL</th>
                         <th class="py-2 px-4 border-b text-center w-[10%]">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="namespace-list">
                     <tr>
-                        <td colspan="7" class="text-center py-4 text-gray-500">Loading namespaces...</td>
+                        <td colspan="8" class="text-center py-4 text-gray-500">Loading namespaces...</td>
                     </tr>
                 </tbody>
             </table>
@@ -88,18 +89,18 @@
         }
 
         async function loadNamespaces() {
-            namespaceListBody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-gray-500">Loading namespaces...</td></tr>'; // Clear and show loading
+            namespaceListBody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-gray-500">Loading namespaces...</td></tr>'; // Clear and show loading
             const namespaces = await fetchNamespaces();
 
             if (namespaces === null) {
-                namespaceListBody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-red-500">Failed to load namespaces. Check console.</td></tr>';
+                namespaceListBody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-red-500">Failed to load namespaces. Check console.</td></tr>';
                 return; // Stop if fetch failed
             }
 
             namespaceListBody.innerHTML = ''; // Clear loading message
 
             if (namespaces.length === 0) {
-                namespaceListBody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-gray-500">No namespaces found.</td></tr>';
+                namespaceListBody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-gray-500">No namespaces found.</td></tr>';
                 setStatusMessage('No namespaces found.', false);
             } else {
                 namespaces.forEach(ns => {
@@ -118,7 +119,7 @@
             if (ns.error) {
                 tr.innerHTML = `
                     <td class="py-2 px-4 border-b">${ns.id}</td>
-                    <td class="py-2 px-4 border-b text-red-500" colspan="5">Error: ${ns.error}</td>
+                    <td class="py-2 px-4 border-b text-red-500" colspan="6">Error: ${ns.error}</td>
                     <td class="py-2 px-4 border-b text-center">
                         <button class="text-red-500 hover:text-red-700 font-semibold" onclick="handleDeleteSingle('${ns.id}')">Delete</button>
                     </td>
@@ -142,6 +143,11 @@
                 ? `<a href="${adminLink}" target="_blank" class="text-blue-600 hover:underline">${adminLink}</a>`
                 : '<span class="text-gray-400">N/A</span>';
 
+            const friendlyUrl = ns.friendlyUrlName ? `${window.location.origin}/v/${ns.friendlyUrlName}` : null;
+            const friendlyLinkHtml = friendlyUrl
+                ? `<a href="${friendlyUrl}" target="_blank" class="text-purple-600 hover:underline">${friendlyUrl}</a>`
+                : '<span class="text-gray-400">Not Set</span>';
+
             tr.innerHTML = `
                 <td class="py-2 px-4 border-b">${ns.id}</td>
                 <td class="py-2 px-4 border-b">${createdAtFormatted}</td>
@@ -149,6 +155,7 @@
                 <td class="py-2 px-4 border-b text-right">${ns.totalVotes ?? 'N/A'}</td>
                 <td class="py-2 px-4 border-b"><a href="${publicLink}" target="_blank" class="text-blue-600 hover:underline">${publicLink}</a></td>
                 <td class="py-2 px-4 border-b">${adminLinkHtml}</td>
+                <td class="py-2 px-4 border-b">${friendlyLinkHtml}</td>
                 <td class="py-2 px-4 border-b text-center">
                     <button class="text-red-500 hover:text-red-700 font-semibold" onclick="handleDeleteSingle('${ns.id}')">Delete</button>
                 </td>

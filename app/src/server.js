@@ -16,6 +16,72 @@ const DATA_DIR = path.join(__dirname, '..', 'data');
 const NAMESPACES_DIR = path.join(DATA_DIR, 'namespaces');
 const UPLOADS_DIR = path.join(DATA_DIR, 'uploads');
 
+// --- Friendly URL Map ---
+let friendlyUrlToNamespaceIdMap = {};
+
+// Function to normalize friendly names (slugify)
+function normalizeFriendlyName(name) {
+  if (!name) return '';
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+// Function to load the map from existing data on startup
+async function loadFriendlyUrlMap() {
+    console.log('Loading friendly URL map...');
+    const newMap = {};
+    try {
+        const files = await fs.readdir(NAMESPACES_DIR);
+        const namespaceFiles = files.filter(file => file.endsWith('.json'));
+        for (const file of namespaceFiles) {
+            const namespaceId = file.replace('.json', '');
+            try {
+                const data = await readNamespaceData(namespaceId);
+                if (data && data.friendlyUrlName) {
+                    const normalizedName = normalizeFriendlyName(data.friendlyUrlName);
+                    if (normalizedName) {
+                        if (newMap[normalizedName]) {
+                            console.warn(`WARN: Duplicate friendly URL name "${normalizedName}" detected during map load. Namespace ${namespaceId} conflicts with ${newMap[normalizedName]}. Last one wins.`);
+                        }
+                        newMap[normalizedName] = namespaceId;
+                    }
+                }
+            } catch (readError) {
+                console.error(`Error reading namespace ${namespaceId} during map load:`, readError);
+            }
+        }
+        friendlyUrlToNamespaceIdMap = newMap;
+        console.log(`Friendly URL map loaded with ${Object.keys(friendlyUrlToNamespaceIdMap).length} entries.`);
+    } catch (error) {
+        console.error('FATAL: Failed to load friendly URL map on startup:', error);
+        friendlyUrlToNamespaceIdMap = {};
+    }
+}
+
+// Function to update the map when a friendly name changes
+function updateFriendlyUrlMap(namespaceId, oldFriendlyName, newFriendlyName) {
+    const normalizedOld = normalizeFriendlyName(oldFriendlyName);
+    const normalizedNew = normalizeFriendlyName(newFriendlyName);
+
+    if (normalizedOld && friendlyUrlToNamespaceIdMap[normalizedOld] === namespaceId) {
+        delete friendlyUrlToNamespaceIdMap[normalizedOld];
+        console.log(`Map: Removed old friendly name "${normalizedOld}" for namespace ${namespaceId}`);
+    }
+    if (normalizedNew) {
+        if (friendlyUrlToNamespaceIdMap[normalizedNew] && friendlyUrlToNamespaceIdMap[normalizedNew] !== namespaceId) {
+            console.error(`Map Update Conflict: Attempted to map "${normalizedNew}" to ${namespaceId}, but it's already mapped to ${friendlyUrlToNamespaceIdMap[normalizedNew]}.`);
+        } else {
+            friendlyUrlToNamespaceIdMap[normalizedNew] = namespaceId;
+            console.log(`Map: Added new friendly name "${normalizedNew}" for namespace ${namespaceId}`);
+        }
+    }
+}
+
 // --- Superadmin Auth ---
 const superadminUser = process.env.SUPERADMIN_USER;
 const superadminPassword = process.env.SUPERADMIN_PASSWORD;
@@ -73,7 +139,7 @@ async function validateAdminKey(namespaceId, adminKey) {
 async function deleteNamespaceFiles(namespaceId) {
     const namespaceJsonPath = getNamespaceFilePath(namespaceId);
     const namespaceUploadDir = path.join(UPLOADS_DIR, namespaceId);
-    let success = true; // Assume success initially
+    let success = true;
 
     console.log(`Attempting to delete files for namespace: ${namespaceId}`);
 
@@ -84,26 +150,23 @@ async function deleteNamespaceFiles(namespaceId) {
     } catch (error) {
         if (error.code === 'ENOENT') {
             console.log(`Namespace JSON not found (already deleted?): ${namespaceJsonPath}`);
-            // Don't mark as failure if file doesn't exist
         } else {
             console.error(`Error deleting namespace JSON ${namespaceJsonPath}:`, error);
-            success = false; // Mark as failure on other errors
+            success = false;
         }
     }
 
     // 2. Delete the namespace upload directory
     try {
-        // Check if directory exists before attempting to remove
-        await fs.access(namespaceUploadDir); // Throws error if doesn't exist
-        await fs.rm(namespaceUploadDir, { recursive: true, force: true }); // Use force to handle potential issues
+        await fs.access(namespaceUploadDir);
+        await fs.rm(namespaceUploadDir, { recursive: true, force: true });
         console.log(`Deleted namespace upload directory: ${namespaceUploadDir}`);
     } catch (error) {
         if (error.code === 'ENOENT') {
             console.log(`Namespace upload directory not found (already deleted or never existed?): ${namespaceUploadDir}`);
-            // Don't mark as failure if directory doesn't exist
         } else {
             console.error(`Error deleting namespace upload directory ${namespaceUploadDir}:`, error);
-            success = false; // Mark as failure on other errors
+            success = false;
         }
     }
 
@@ -175,7 +238,8 @@ app.post('/namespace', async (req, res) => {
     const newNamespaceData = {
         adminKey: adminKey,
         createdAt: new Date().toISOString(),
-        logos: []
+        logos: [],
+        friendlyUrlName: null
     };
 
     try {
@@ -185,6 +249,53 @@ app.post('/namespace', async (req, res) => {
     } catch (error) {
         console.error('Error creating namespace:', error);
         res.status(500).json({ message: 'Failed to create namespace.' });
+    }
+});
+
+// --- NEW ENDPOINT: Set Friendly URL ---
+app.post('/namespace/friendly-url', async (req, res) => {
+    const { namespace, admin } = req.query;
+    const { friendlyName } = req.body;
+
+    if (!namespace || !admin) {
+        return res.status(400).json({ message: 'Namespace ID and Admin Key are required.' });
+    }
+    if (typeof friendlyName !== 'string') {
+        return res.status(400).json({ message: 'friendlyName (string) is required in the request body.' });
+    }
+
+    try {
+        const isAdmin = await validateAdminKey(namespace, admin);
+        if (!isAdmin) {
+            return res.status(403).json({ message: 'Invalid Admin Key.' });
+        }
+
+        const normalizedName = normalizeFriendlyName(friendlyName);
+
+        if (normalizedName) {
+            const existingNamespaceId = friendlyUrlToNamespaceIdMap[normalizedName];
+            if (existingNamespaceId && existingNamespaceId !== namespace) {
+                return res.status(409).json({ message: `Friendly URL name "${normalizedName}" is already taken.` });
+            }
+        }
+
+        const data = await readNamespaceData(namespace);
+        if (!data) {
+            return res.status(404).json({ message: 'Namespace not found.' });
+        }
+        const oldFriendlyName = data.friendlyUrlName || '';
+
+        data.friendlyUrlName = normalizedName;
+
+        await writeNamespaceData(namespace, data);
+
+        updateFriendlyUrlMap(namespace, oldFriendlyName, normalizedName);
+
+        console.log(`Friendly URL for namespace ${namespace} set to "${normalizedName}"`);
+        res.status(200).json({ message: 'Friendly URL updated successfully.', friendlyUrlName: normalizedName });
+    } catch (error) {
+        console.error(`Error setting friendly URL for namespace ${namespace}:`, error);
+        res.status(500).json({ message: 'Failed to set friendly URL.' });
     }
 });
 
@@ -205,7 +316,10 @@ app.get('/logos', async (req, res) => {
             path: logo.path,
             votes: logo.votes.length
         }));
-        res.json(logosResponse);
+        res.json({
+            logos: logosResponse,
+            friendlyUrlName: data.friendlyUrlName || null
+        });
     } catch (error) {
         res.status(500).json({ message: 'Failed to retrieve logos.' });
     }
@@ -482,14 +596,15 @@ superadminRouter.get('/namespaces', async (req, res) => {
                         createdAt: data.createdAt || 'N/A',
                         logoCount: data.logos.length,
                         totalVotes: totalVotes,
-                        adminKey: data.adminKey // --- MODIFICATION: Add adminKey ---
+                        adminKey: data.adminKey,
+                        friendlyUrlName: data.friendlyUrlName || null
                     });
                 } else {
-                    namespaceDetails.push({ id: namespaceId, error: 'Could not read data', adminKey: null }); // Add adminKey: null for consistency
+                    namespaceDetails.push({ id: namespaceId, error: 'Could not read data', adminKey: null, friendlyUrlName: null });
                 }
             } catch (readError) {
                 console.error(`Superadmin: Error reading namespace ${namespaceId}:`, readError);
-                namespaceDetails.push({ id: namespaceId, error: 'Error reading data', adminKey: null }); // Add adminKey: null for consistency
+                namespaceDetails.push({ id: namespaceId, error: 'Error reading data', adminKey: null, friendlyUrlName: null });
             }
         }
         res.json(namespaceDetails);
@@ -617,20 +732,32 @@ if (superadminUser && superadminPassword) {
      });
 }
 
-// --- Serve index.html at root --- Added Section ---
-// Ensure this is defined *after* other specific routes like /superadmin
+// --- NEW ROUTE: Access via Friendly URL ---
+app.get('/v/:friendlyUrlName', (req, res) => {
+    const friendlyName = req.params.friendlyUrlName;
+    const namespaceId = friendlyUrlToNamespaceIdMap[friendlyName];
+
+    if (namespaceId) {
+        res.redirect(`/?namespace=${namespaceId}`);
+    } else {
+        res.status(404).send('Friendly URL not found.');
+    }
+});
+
+// --- Serve index.html at root ---
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
-// --- End Added Section ---
 
 // --- Server Start ---
-ensureDataDirs().then(() => {
-    app.listen(port, () => {
-        console.log(`LogoVote backend listening at http://localhost:${port}`);
-        console.log('[Cron] Namespace pruning job scheduled to run daily at midnight.');
+ensureDataDirs()
+    .then(loadFriendlyUrlMap)
+    .then(() => {
+        app.listen(port, () => {
+            console.log(`LogoVote backend listening at http://localhost:${port}`);
+            console.log('[Cron] Namespace pruning job scheduled to run daily at midnight.');
+        });
+    }).catch(err => {
+        console.error("Failed to initialize server:", err);
+        process.exit(1);
     });
-}).catch(err => {
-    console.error("Failed to initialize server:", err);
-    process.exit(1);
-});

@@ -115,14 +115,25 @@
         <div id="namespace-info" class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded">
             <h2 class="text-xl font-semibold mb-2">Current Namespace</h2>
             <p id="current-namespace-id" class="mb-2">Loading...</p>
-            <div id="admin-controls-section" class="hidden mt-4 space-y-2">
+            <div id="admin-controls-section" class="hidden mt-4 space-y-4">
                 <h3 class="font-semibold text-lg text-red-600">Admin Controls</h3>
-                <button id="clear-votes-btn" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out">Clear All Votes</button>
-                <button id="delete-namespace-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out">Delete This Namespace</button>
+                <div>
+                    <label for="friendly-url-input" class="block text-sm font-medium text-gray-700 mb-1">Friendly URL Name:</label>
+                    <div class="flex items-center space-x-2">
+                        <input type="text" id="friendly-url-input" placeholder="e.g., my-cool-event" class="flex-grow p-2 border border-gray-300 rounded shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        <button id="set-friendly-url-btn" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out">Set Name</button>
+                    </div>
+                    <p id="friendly-url-status" class="mt-1 text-sm text-gray-600">Current: <span id="current-friendly-url" class="font-medium">None</span></p>
+                </div>
+                <div>
+                    <button id="clear-votes-btn" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out">Clear All Votes</button>
+                    <button id="delete-namespace-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out">Delete This Namespace</button>
+                </div>
             </div>
              <div id="namespace-links" class="hidden mt-4 space-y-2">
                  <h3 class="font-semibold text-lg">Share Links</h3>
                  <p><strong>Voting Link:</strong> <a id="voting-link" href="#" class="text-blue-500 hover:underline" target="_blank"></a></p>
+                 <p id="friendly-link-p" class="hidden"><strong>Friendly Link:</strong> <a id="friendly-link" href="#" class="text-purple-600 hover:underline" target="_blank"></a></p>
                  <p><strong>Admin Link:</strong> <a id="admin-link" href="#" class="text-red-500 hover:underline" target="_blank"></a> <span class="text-sm text-gray-600">(Keep this safe!)</span></p>
              </div>
         </div>
@@ -201,6 +212,12 @@
         const namespaceLinksDiv = document.getElementById('namespace-links');
         const votingLinkA = document.getElementById('voting-link');
         const adminLinkA = document.getElementById('admin-link');
+        const friendlyUrlInput = document.getElementById('friendly-url-input');
+        const setFriendlyUrlBtn = document.getElementById('set-friendly-url-btn');
+        const friendlyUrlStatus = document.getElementById('friendly-url-status');
+        const currentFriendlyUrlSpan = document.getElementById('current-friendly-url');
+        const friendlyLinkP = document.getElementById('friendly-link-p');
+        const friendlyLinkA = document.getElementById('friendly-link');
 
         // Modal elements
         const identifierModal = document.getElementById('identifier-modal');
@@ -222,6 +239,7 @@
         let isAdmin = false;
         let displayedLogos = []; // To store the current list of logos
         let currentLogoIndex = -1; // Index of the logo currently shown in the viewer
+        let currentFriendlyUrlName = null; // Store current friendly name
 
         // --- Initialization ---
         document.addEventListener('DOMContentLoaded', () => {
@@ -250,6 +268,7 @@
                 }
             });
             document.addEventListener('keydown', handleKeydown);
+            setFriendlyUrlBtn.addEventListener('click', handleSetFriendlyUrl); // Add listener
         });
 
         function showWelcomeView() {
@@ -291,7 +310,7 @@
             }
             // namespaceLinksDiv.style.display = 'none'; // Hide links initially // REMOVED this line as logic is handled above
 
-            await loadLogos();
+            await loadLogos(); // This will update currentFriendlyUrlName via processLogosResponse
         }
 
         // --- API Interaction ---
@@ -300,13 +319,19 @@
             try {
                 const response = await fetch(`${apiUrl}/logos?namespace=${namespaceId}`);
                 if (!response.ok) {
+                    // Handle 404 specifically for namespace not found
+                    if (response.status === 404) {
+                         setStatusMessage('Error: Namespace not found.', true);
+                         showWelcomeView(); // Go back to welcome if namespace invalid
+                         return null; // Indicate failure clearly
+                    }
                     throw new Error(`Failed to fetch logos: ${response.statusText}`);
                 }
-                return await response.json();
+                return await response.json(); // Returns { logos: [], friendlyUrlName: "..." }
             } catch (error) {
                 console.error('Error fetching logos:', error);
                 setStatusMessage(`Error loading logos: ${error.message}`, true);
-                return [];
+                return null; // Indicate failure
             }
         }
 
@@ -317,19 +342,16 @@
             noLogosMessage.style.display = 'none';
             displayedLogos = []; // Reset logo list
 
-            const logos = await fetchLogos(currentNamespaceId);
-            displayedLogos = logos; // Store fetched logos
+            const responseData = await fetchLogos(currentNamespaceId);
 
-            if (logos.length === 0) {
-                noLogosMessage.style.display = 'block';
-                 setStatusMessage('', false);
-            } else {
-                logos.forEach((logo, index) => { // Add index here
-                    const logoElement = createLogoElement(logo, index); // Pass index
-                    logoGrid.appendChild(logoElement);
-                });
-                 setStatusMessage('', false);
+            // --- MODIFICATION START: Process response data ---
+            if (responseData === null) {
+                 // Error handled in fetchLogos, view might be reset
+                 return;
             }
+
+            processLogosResponse(responseData);
+            // --- MODIFICATION END ---
         }
 
         function createLogoElement(logo, index) { // Accept index
@@ -716,6 +738,95 @@
             statusMessage.textContent = message;
             statusMessage.className = `mt-6 text-center font-medium ${isError ? 'text-red-600' : 'text-green-600'}`;
         }
+
+        // --- MODIFICATION START: New function to process logo/namespace data ---
+        function processLogosResponse(responseData) {
+             const logos = responseData.logos || [];
+             currentFriendlyUrlName = responseData.friendlyUrlName || null; // Update global state
+
+             displayedLogos = logos; // Store fetched logos
+
+             if (logos.length === 0) {
+                noLogosMessage.style.display = 'block';
+                 setStatusMessage('', false);
+            } else {
+                 noLogosMessage.style.display = 'none';
+                logos.forEach((logo, index) => {
+                    const logoElement = createLogoElement(logo, index);
+                    logoGrid.appendChild(logoElement);
+                });
+                 setStatusMessage('', false);
+            }
+
+            // Update friendly URL display elements after processing
+            updateFriendlyUrlDisplay();
+        }
+        // --- MODIFICATION END ---
+
+        // --- MODIFICATION START: New function to update friendly URL UI elements ---
+        function updateFriendlyUrlDisplay() {
+             if (isAdmin) { // Only show input/current if admin
+                 friendlyUrlInput.value = currentFriendlyUrlName || '';
+                 currentFriendlyUrlSpan.textContent = currentFriendlyUrlName || 'None';
+             }
+
+             // Update share link visibility and content
+             if (currentFriendlyUrlName) {
+                 const friendlyUrl = `${window.location.origin}/v/${currentFriendlyUrlName}`;
+                 friendlyLinkA.href = friendlyUrl;
+                 friendlyLinkA.textContent = friendlyUrl;
+                 friendlyLinkP.style.display = 'block';
+             } else {
+                 friendlyLinkP.style.display = 'none';
+             }
+        }
+        // --- MODIFICATION END ---
+
+        // --- MODIFICATION START: Add handler for setting friendly URL ---
+        async function handleSetFriendlyUrl() {
+            if (!isAdmin || !currentNamespaceId || !currentAdminKey) return;
+
+            const desiredName = friendlyUrlInput.value; // Get value from input
+
+            setStatusMessage('Setting friendly URL...', false);
+            friendlyUrlStatus.textContent = 'Updating...'; // Use the specific status P tag
+
+            try {
+                const response = await fetch(`${apiUrl}/namespace/friendly-url?namespace=${currentNamespaceId}&admin=${currentAdminKey}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ friendlyName: desiredName }), // Send the raw desired name
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    // Handle specific conflict error
+                    if (response.status === 409) {
+                         friendlyUrlStatus.textContent = `Error: ${result.message}`;
+                         friendlyUrlStatus.className = 'mt-1 text-sm text-red-600';
+                    } else {
+                        throw new Error(result.message || `Failed to set friendly URL: ${response.statusText}`);
+                    }
+                     setStatusMessage(`Error: ${result.message || 'Failed to set friendly URL.'}`, true); // General status
+                } else {
+                    setStatusMessage('Friendly URL updated!', false); // General status
+                    friendlyUrlStatus.textContent = `Current: ${result.friendlyUrlName || 'None'}`; // Specific status
+                    friendlyUrlStatus.className = 'mt-1 text-sm text-gray-600';
+                    currentFriendlyUrlName = result.friendlyUrlName || null; // Update state
+                    updateFriendlyUrlDisplay(); // Refresh links and input
+                }
+
+            } catch (error) {
+                console.error('Error setting friendly URL:', error);
+                setStatusMessage(`Error: ${error.message}`, true); // General status
+                friendlyUrlStatus.textContent = `Error: ${error.message}`; // Specific status
+                friendlyUrlStatus.className = 'mt-1 text-sm text-red-600';
+            }
+        }
+        // --- MODIFICATION END ---
 
     </script>
 </body>
