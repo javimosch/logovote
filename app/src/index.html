@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LogoVote Tool</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Basic styling for modal */
+        .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); }
+        .modal-content { background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 400px; }
+        .close-button { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+
+        /* Styling for Logo Viewer Modal */
+        .logo-viewer-modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1000; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: hidden; /* Prevent scrollbars on body when modal is open */
+            background-color: rgba(0,0,0,0.85); /* Black w/ opacity */
+            display: flex; /* Use flexbox for centering */
+            flex-direction: column; /* Stack elements vertically */
+            justify-content: center; /* Center vertically */
+            align-items: center; /* Center horizontally */
+        }
+
+        .logo-viewer-content {
+            display: block;
+            width: auto; /* Adjust based on image */
+            height: auto; /* Adjust based on image */
+            max-width: 85vw; /* Max width */
+            max-height: 75vh; /* Max height, leave space for buttons */
+            object-fit: contain; /* Scale the image down, keeping aspect ratio */
+            cursor: default; /* Default cursor for the image itself */
+            margin-bottom: 1rem; /* Space below image */
+        }
+
+        .logo-viewer-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            position: absolute; /* Position controls relative to modal */
+            bottom: 2vh; /* Position at the bottom */
+            z-index: 1001;
+        }
+
+        .logo-viewer-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: rgba(50, 50, 50, 0.6);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            font-size: 30px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+            z-index: 1002; /* Above image */
+        }
+        .logo-viewer-nav:hover {
+            background-color: rgba(80, 80, 80, 0.8);
+        }
+        .logo-viewer-prev {
+            left: 2vw;
+        }
+        .logo-viewer-next {
+            right: 2vw;
+        }
+        .logo-viewer-nav.disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .logo-viewer-vote-btn {
+             background-color: #28a745; /* Green */
+             color: white;
+             border: none;
+             padding: 10px 20px;
+             font-size: 16px;
+             font-weight: bold;
+             border-radius: 5px;
+             cursor: pointer;
+             transition: background-color 0.3s;
+             margin: 0 10px; /* Space around vote button */
+        }
+        .logo-viewer-vote-btn:hover {
+             background-color: #218838; /* Darker green */
+        }
+
+        .logo-viewer-close {
+            position: absolute;
+            top: 15px;
+            right: 35px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            transition: 0.3s;
+            cursor: pointer;
+            z-index: 1001; /* Above the image */
+        }
+
+        /* Styling for Logo Viewer Modal */
+        .logo-viewer-modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1000; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: hidden; /* Prevent scrollbars on body when modal is open */
+            background-color: rgba(0,0,0,0.85); /* Black w/ opacity */
+            display: flex; /* Use flexbox for centering */
+            flex-direction: column; /* Stack elements vertically */
+            justify-content: center; /* Center vertically */
+            align-items: center; /* Center horizontally */
+        }
+
+        .logo-viewer-content {
+            display: block;
+            width: auto; /* Adjust based on image */
+            height: auto; /* Adjust based on image */
+            max-width: 85vw; /* Max width */
+            max-height: 75vh; /* Max height, leave space for buttons */
+            object-fit: contain; /* Scale the image down, keeping aspect ratio */
+            cursor: default; /* Default cursor for the image itself */
+            margin-bottom: 1rem; /* Space below image */
+        }
+
+        .logo-viewer-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            position: absolute; /* Position controls relative to modal */
+            bottom: 2vh; /* Position at the bottom */
+            z-index: 1001;
+        }
+
+        .logo-viewer-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: rgba(50, 50, 50, 0.6);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            font-size: 30px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+            z-index: 1002; /* Above image */
+        }
+        .logo-viewer-nav:hover {
+            background-color: rgba(80, 80, 80, 0.8);
+        }
+        .logo-viewer-prev {
+            left: 2vw;
+        }
+        .logo-viewer-next {
+            right: 2vw;
+        }
+        .logo-viewer-nav.disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .logo-viewer-vote-btn {
+             background-color: #28a745; /* Green */
+             color: white;
+             border: none;
+             padding: 10px 20px;
+             font-size: 16px;
+             font-weight: bold;
+             border-radius: 5px;
+             cursor: pointer;
+             transition: background-color 0.3s;
+             margin: 0 10px; /* Space around vote button */
+        }
+        .logo-viewer-vote-btn:hover {
+             background-color: #218838; /* Darker green */
+        }
+
+        .logo-viewer-close {
+            position: absolute;
+            top: 15px;
+            right: 35px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            transition: 0.3s;
+            cursor: pointer;
+            z-index: 1001; /* Above the image */
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-8 font-sans">
+
+    <div class="container mx-auto bg-white p-6 rounded-lg shadow-md">
+        <h1 class="text-3xl font-bold mb-6 text-center text-blue-600">LogoVote Tool</h1>
+
+        <!-- Namespace Info -->
+        <div id="namespace-info" class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded">
+            <h2 class="text-xl font-semibold mb-2">Current Namespace</h2>
+            <p id="current-namespace-id" class="mb-2">Loading...</p>
+            <div id="admin-controls-section" class="hidden mt-4 space-y-2">
+                <h3 class="font-semibold text-lg text-red-600">Admin Controls</h3>
+                <button id="clear-votes-btn" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out">Clear All Votes</button>
+                <button id="delete-namespace-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out">Delete This Namespace</button>
+            </div>
+             <div id="namespace-links" class="hidden mt-4 space-y-2">
+                 <h3 class="font-semibold text-lg">Share Links</h3>
+                 <p><strong>Voting Link:</strong> <a id="voting-link" href="#" class="text-blue-500 hover:underline" target="_blank"></a></p>
+                 <p><strong>Admin Link:</strong> <a id="admin-link" href="#" class="text-red-500 hover:underline" target="_blank"></a> <span class="text-sm text-gray-600">(Keep this safe!)</span></p>
+             </div>
+        </div>
+
+        <!-- Create Namespace Section -->
+        <div id="create-namespace-section" class="mb-6 text-center">
+             <p id="welcome-message" class="mb-4 text-lg">Welcome! Create a new voting namespace or access an existing one using the URL.</p>
+            <button id="create-namespace-btn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out">Create New Vote Namespace</button>
+        </div>
+
+        <!-- Upload Section -->
+        <div id="upload-section" class="mb-6 hidden">
+            <h2 class="text-xl font-semibold mb-2">Upload New Logo</h2>
+            <form id="upload-form" class="flex items-center space-x-4">
+                <input type="file" id="logo-file-input" name="logoFile" accept=".svg,.jpg,.jpeg,.png" required class="block w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 cursor-pointer focus:outline-none">
+                <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out">Upload</button>
+            </form>
+            <p id="upload-status" class="mt-2 text-sm"></p>
+        </div>
+
+        <!-- Logo Grid -->
+        <div id="logo-grid-section" class="hidden">
+            <h2 class="text-xl font-semibold mb-4">Vote on Logos</h2>
+            <div id="logo-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                <!-- Logos will be loaded here -->
+            </div>
+             <p id="no-logos-message" class="text-center text-gray-500 hidden">No logos uploaded yet for this namespace.</p>
+        </div>
+
+        <!-- Identifier Modal -->
+        <div id="identifier-modal" class="modal">
+            <div class="modal-content">
+                <span class="close-button" onclick="closeModal()">&times;</span>
+                <h3 class="text-lg font-semibold mb-3">Enter Your Identifier</h3>
+                <p class="text-sm mb-4 text-gray-600">Please provide a unique identifier (e.g., email or phone number). We only use this to count votes and ensure one vote per logo within this namespace. It is stored securely.</p>
+                <input type="text" id="identifier-input" placeholder="Your email or phone" class="w-full p-2 border border-gray-300 rounded mb-4">
+                <button id="submit-identifier-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded w-full transition duration-150 ease-in-out">Submit and Vote</button>
+                <p id="modal-error" class="text-red-500 text-sm mt-2"></p>
+            </div>
+        </div>
+
+        <!-- Logo Viewer Modal -->
+        <div id="logo-viewer-modal" class="logo-viewer-modal">
+            <span class="logo-viewer-close" id="logo-viewer-close-btn">&times;</span>
+            <button id="logo-viewer-prev" class="logo-viewer-nav logo-viewer-prev">&#10094;</button>
+            <img class="logo-viewer-content" id="logo-viewer-img">
+            <button id="logo-viewer-next" class="logo-viewer-nav logo-viewer-next">&#10095;</button>
+            <div class="logo-viewer-controls">
+                 <button id="logo-viewer-vote-btn" class="logo-viewer-vote-btn">Vote for this Logo</button>
+            </div>
+        </div>
+
+        <!-- General Status/Error Message Area -->
+        <div id="status-message" class="mt-6 text-center font-medium"></div>
+
+    </div>
+
+    <script>
+        const apiUrl = ''; // Assuming backend is running on the same origin
+        const logoGrid = document.getElementById('logo-grid');
+        const uploadForm = document.getElementById('upload-form');
+        const logoFileInput = document.getElementById('logo-file-input');
+        const uploadStatus = document.getElementById('upload-status');
+        const createNamespaceBtn = document.getElementById('create-namespace-btn');
+        const namespaceInfoDiv = document.getElementById('namespace-info');
+        const currentNamespaceIdP = document.getElementById('current-namespace-id');
+        const uploadSection = document.getElementById('upload-section');
+        const logoGridSection = document.getElementById('logo-grid-section');
+        const createNamespaceSection = document.getElementById('create-namespace-section');
+        const welcomeMessage = document.getElementById('welcome-message');
+        const noLogosMessage = document.getElementById('no-logos-message');
+        const statusMessage = document.getElementById('status-message');
+        const adminControlsSection = document.getElementById('admin-controls-section');
+        const clearVotesBtn = document.getElementById('clear-votes-btn');
+        const deleteNamespaceBtn = document.getElementById('delete-namespace-btn');
+        const namespaceLinksDiv = document.getElementById('namespace-links');
+        const votingLinkA = document.getElementById('voting-link');
+        const adminLinkA = document.getElementById('admin-link');
+
+        // Modal elements
+        const identifierModal = document.getElementById('identifier-modal');
+        const identifierInput = document.getElementById('identifier-input');
+        const submitIdentifierBtn = document.getElementById('submit-identifier-btn');
+        const modalError = document.getElementById('modal-error');
+        let currentLogoIdToVote = null; // Store logo ID when modal opens
+
+        // Logo Viewer Modal elements
+        const logoViewerModal = document.getElementById('logo-viewer-modal');
+        const logoViewerImg = document.getElementById('logo-viewer-img');
+        const logoViewerCloseBtn = document.getElementById('logo-viewer-close-btn');
+        const logoViewerPrevBtn = document.getElementById('logo-viewer-prev');
+        const logoViewerNextBtn = document.getElementById('logo-viewer-next');
+        const logoViewerVoteBtn = document.getElementById('logo-viewer-vote-btn');
+
+        let currentNamespaceId = null;
+        let currentAdminKey = null;
+        let isAdmin = false;
+        let displayedLogos = []; // To store the current list of logos
+        let currentLogoIndex = -1; // Index of the logo currently shown in the viewer
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            currentNamespaceId = urlParams.get('namespace');
+            currentAdminKey = urlParams.get('admin'); // Might be null
+
+            if (currentNamespaceId) {
+                initializeNamespaceView();
+            } else {
+                showWelcomeView();
+            }
+
+            createNamespaceBtn.addEventListener('click', handleCreateNamespace);
+            uploadForm.addEventListener('submit', handleUpload);
+            submitIdentifierBtn.addEventListener('click', handleSubmitIdentifier);
+            clearVotesBtn.addEventListener('click', handleClearVotes);
+            deleteNamespaceBtn.addEventListener('click', handleDeleteNamespace);
+            logoViewerCloseBtn.addEventListener('click', closeLogoViewer);
+            logoViewerPrevBtn.addEventListener('click', showPreviousLogo);
+            logoViewerNextBtn.addEventListener('click', showNextLogo);
+            logoViewerVoteBtn.addEventListener('click', handleModalVoteClick);
+            logoViewerModal.addEventListener('click', (event) => {
+                if (event.target === logoViewerModal) {
+                    closeLogoViewer();
+                }
+            });
+            document.addEventListener('keydown', handleKeydown);
+        });
+
+        function showWelcomeView() {
+            namespaceInfoDiv.style.display = 'none';
+            uploadSection.style.display = 'none';
+            logoGridSection.style.display = 'none';
+            createNamespaceSection.style.display = 'block';
+            welcomeMessage.style.display = 'block';
+        }
+
+        async function initializeNamespaceView() {
+            currentNamespaceIdP.textContent = `Namespace ID: ${currentNamespaceId}`;
+            namespaceInfoDiv.style.display = 'block';
+            uploadSection.style.display = 'block';
+            logoGridSection.style.display = 'block';
+            createNamespaceSection.style.display = 'none'; // Hide creation button
+            welcomeMessage.style.display = 'none';
+
+            // Check if admin key is present and potentially valid (backend confirms)
+            isAdmin = !!currentAdminKey; // Assume admin if key exists, backend verifies actions
+            if (isAdmin) {
+                adminControlsSection.style.display = 'block';
+                // --- MODIFICATION START ---
+                // Show links if admin key is present in URL
+                const baseUrl = window.location.origin + window.location.pathname;
+                const votingUrl = `${baseUrl}?namespace=${currentNamespaceId}`;
+                const adminUrl = `${baseUrl}?namespace=${currentNamespaceId}&admin=${currentAdminKey}`;
+
+                votingLinkA.href = votingUrl;
+                votingLinkA.textContent = votingUrl;
+                adminLinkA.href = adminUrl;
+                adminLinkA.textContent = adminUrl;
+                namespaceLinksDiv.style.display = 'block';
+                // --- MODIFICATION END ---
+            } else {
+                adminControlsSection.style.display = 'none';
+                // Hide links if not admin
+                namespaceLinksDiv.style.display = 'none'; // Keep this line for non-admin view
+            }
+            // namespaceLinksDiv.style.display = 'none'; // Hide links initially // REMOVED this line as logic is handled above
+
+            await loadLogos();
+        }
+
+        // --- API Interaction ---
+
+        async function fetchLogos(namespaceId) {
+            try {
+                const response = await fetch(`${apiUrl}/logos?namespace=${namespaceId}`);
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch logos: ${response.statusText}`);
+                }
+                return await response.json();
+            } catch (error) {
+                console.error('Error fetching logos:', error);
+                setStatusMessage(`Error loading logos: ${error.message}`, true);
+                return [];
+            }
+        }
+
+        async function loadLogos() {
+            if (!currentNamespaceId) return;
+            setStatusMessage('Loading logos...', false);
+            logoGrid.innerHTML = ''; // Clear existing logos
+            noLogosMessage.style.display = 'none';
+            displayedLogos = []; // Reset logo list
+
+            const logos = await fetchLogos(currentNamespaceId);
+            displayedLogos = logos; // Store fetched logos
+
+            if (logos.length === 0) {
+                noLogosMessage.style.display = 'block';
+                 setStatusMessage('', false);
+            } else {
+                logos.forEach((logo, index) => { // Add index here
+                    const logoElement = createLogoElement(logo, index); // Pass index
+                    logoGrid.appendChild(logoElement);
+                });
+                 setStatusMessage('', false);
+            }
+        }
+
+        function createLogoElement(logo, index) { // Accept index
+            const div = document.createElement('div');
+            div.className = 'bg-white p-4 rounded-lg shadow hover:shadow-lg transition-shadow duration-200 ease-in-out relative';
+
+            const img = document.createElement('img');
+            const imgSrc = `${apiUrl}/data/uploads/${logo.path}`;
+            img.src = imgSrc;
+            img.alt = 'Logo Thumbnail';
+            img.className = 'w-full h-40 object-contain mb-3 cursor-pointer';
+            img.onclick = () => openLogoViewer(index); // Pass index to openLogoViewer
+
+            const voteCount = document.createElement('p');
+            voteCount.textContent = `Votes: ${logo.votes}`;
+            voteCount.className = 'text-center text-lg font-semibold mb-3';
+            voteCount.id = `votes-${logo.id}`;
+
+            const voteButton = document.createElement('button');
+            voteButton.textContent = 'Vote';
+            voteButton.className = 'w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out';
+            voteButton.onclick = () => handleVoteClick(logo.id); // Grid vote button still uses ID directly
+
+            div.appendChild(img);
+            div.appendChild(voteCount);
+            div.appendChild(voteButton);
+
+            // Add delete button for admin
+            if (isAdmin) {
+                const deleteButton = document.createElement('button');
+                deleteButton.innerHTML = '&times;'; // 'X' symbol
+                deleteButton.className = 'absolute top-1 right-1 bg-red-500 hover:bg-red-700 text-white font-bold h-6 w-6 rounded-full flex items-center justify-center text-xs';
+                deleteButton.title = 'Delete Logo';
+                deleteButton.onclick = () => handleDeleteLogo(logo.id);
+                div.appendChild(deleteButton);
+            }
+
+            return div;
+        }
+
+        // --- Event Handlers ---
+
+        async function handleCreateNamespace() {
+            setStatusMessage('Creating namespace...', false);
+            try {
+                const response = await fetch(`${apiUrl}/namespace`, { method: 'POST' });
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || `Failed to create namespace: ${response.statusText}`);
+                }
+                const data = await response.json();
+
+                // --- MODIFICATION START ---
+                // Update state before calling initializeNamespaceView
+                currentNamespaceId = data.namespaceId;
+                currentAdminKey = data.adminKey;
+                isAdmin = true; // Creator is admin
+
+                // Update URL without reloading - this makes initializeNamespaceView work correctly if called immediately
+                const adminUrl = `${window.location.origin}${window.location.pathname}?namespace=${currentNamespaceId}&admin=${currentAdminKey}`;
+                history.pushState({ namespaceId: currentNamespaceId, adminKey: currentAdminKey }, '', adminUrl);
+
+                // Display links (will also be handled by initializeNamespaceView, but good for immediate feedback)
+                // const baseUrl = window.location.origin + window.location.pathname; // Base URL already correct due to pushState
+                // const votingUrl = `${baseUrl}?namespace=${data.namespaceId}`;
+                // votingLinkA.href = votingUrl;
+                // votingLinkA.textContent = votingUrl;
+                // adminLinkA.href = adminUrl; // adminUrl already calculated
+                // adminLinkA.textContent = adminUrl;
+                // namespaceLinksDiv.style.display = 'block'; // This will be set by initializeNamespaceView
+
+                setStatusMessage('Namespace created! Use the links above.', false);
+                // --- MODIFICATION END ---
+
+                // Optionally redirect to the new namespace admin view immediately
+                // window.location.href = adminUrl; // Avoid redirect, use pushState and update view
+
+                // Or just update the UI to reflect the new state without redirecting
+                // currentNamespaceId = data.namespaceId; // Moved up
+                // currentAdminKey = data.adminKey; // Moved up
+                // isAdmin = true; // Creator is admin // Moved up
+                initializeNamespaceView(); // Refresh view for the new namespace
+
+            } catch (error) {
+                console.error('Error creating namespace:', error);
+                setStatusMessage(`Error: ${error.message}`, true);
+                 namespaceLinksDiv.style.display = 'none'; // Hide links on error
+            }
+        }
+
+        async function handleUpload(event) {
+            event.preventDefault();
+            if (!currentNamespaceId) {
+                uploadStatus.textContent = 'Error: No namespace selected.';
+                uploadStatus.className = 'mt-2 text-sm text-red-500';
+                return;
+            }
+            if (!logoFileInput.files || logoFileInput.files.length === 0) {
+                uploadStatus.textContent = 'Please select a file to upload.';
+                 uploadStatus.className = 'mt-2 text-sm text-yellow-600';
+                return;
+            }
+
+            const file = logoFileInput.files[0];
+            const formData = new FormData();
+            formData.append('logoFile', file);
+
+            uploadStatus.textContent = 'Uploading...';
+            uploadStatus.className = 'mt-2 text-sm text-blue-600';
+
+            try {
+                const response = await fetch(`${apiUrl}/upload?namespace=${currentNamespaceId}`, {
+                    method: 'POST',
+                    body: formData,
+                    // 'Content-Type' header is set automatically by browser for FormData
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.message || `Upload failed: ${response.statusText}`);
+                }
+
+                uploadStatus.textContent = `Success: ${result.message}`;
+                uploadStatus.className = 'mt-2 text-sm text-green-600';
+                logoFileInput.value = ''; // Clear the input
+                await loadLogos(); // Refresh the grid
+
+            } catch (error) {
+                console.error('Upload error:', error);
+                uploadStatus.textContent = `Error: ${error.message}`;
+                uploadStatus.className = 'mt-2 text-sm text-red-500';
+            }
+        }
+
+        function handleVoteClick(logoId) {
+            const identifierKey = `namespace-${currentNamespaceId}-identifier`;
+            const storedIdentifier = localStorage.getItem(identifierKey);
+
+            if (storedIdentifier) {
+                // Identifier exists, proceed to vote directly
+                submitVote(logoId, storedIdentifier);
+            } else {
+                // No identifier stored for this namespace, open modal
+                currentLogoIdToVote = logoId; // Store which logo is being voted on
+                openModal();
+            }
+        }
+
+        function handleSubmitIdentifier() {
+            const identifier = identifierInput.value.trim();
+            if (!identifier) {
+                modalError.textContent = 'Identifier cannot be empty.';
+                return;
+            }
+            if (!currentLogoIdToVote) {
+                 modalError.textContent = 'Error: No logo selected for voting.';
+                 return;
+            }
+
+            modalError.textContent = ''; // Clear previous errors
+
+            // Encode identifier (simple Base64 for this example)
+            const encodedIdentifier = btoa(identifier); // Base64 encode
+
+            // Store identifier in localStorage, scoped to namespace
+            const identifierKey = `namespace-${currentNamespaceId}-identifier`;
+            localStorage.setItem(identifierKey, encodedIdentifier);
+
+            // Close modal and submit the vote
+            closeModal();
+            submitVote(currentLogoIdToVote, encodedIdentifier);
+            identifierInput.value = ''; // Clear input
+            currentLogoIdToVote = null; // Reset
+        }
+
+        async function submitVote(logoId, identifier) {
+             if (!currentNamespaceId) return;
+             setStatusMessage('Submitting vote...', false);
+
+            try {
+                const response = await fetch(`${apiUrl}/vote?namespace=${currentNamespaceId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ logoId, identifier }),
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                     // Handle specific conflict case (already voted)
+                    if (response.status === 409) {
+                         setStatusMessage(result.message || 'You have already voted for this logo.', true);
+                    } else {
+                        throw new Error(result.message || `Vote failed: ${response.statusText}`);
+                    }
+                } else {
+                    setStatusMessage('Vote recorded!', false);
+                    // Update vote count display dynamically IN THE GRID
+                    const voteCountElement = document.getElementById(`votes-${logoId}`);
+                    if (voteCountElement) {
+                        voteCountElement.textContent = `Votes: ${result.votes}`;
+                    }
+                     // Update the stored logo data as well, so cycling shows correct count if we re-fetch later
+                     const logoIndex = displayedLogos.findIndex(l => l.id === logoId);
+                     if (logoIndex !== -1) {
+                         // Note: This assumes the identifier wasn't already present.
+                         // A more robust approach might re-fetch the specific logo's data.
+                         displayedLogos[logoIndex].votes = result.votes;
+                     }
+                }
+
+            } catch (error) {
+                console.error('Vote error:', error);
+                setStatusMessage(`Error: ${error.message}`, true);
+            }
+        }
+
+        // --- Admin Actions ---
+
+        async function handleDeleteLogo(logoId) {
+            if (!isAdmin || !currentAdminKey || !currentNamespaceId) return;
+
+            if (!confirm(`Are you sure you want to delete logo ${logoId}? This cannot be undone.`)) {
+                return;
+            }
+
+            setStatusMessage('Deleting logo...', false);
+            try {
+                const response = await fetch(`${apiUrl}/logo?namespace=${currentNamespaceId}&logoId=${logoId}&admin=${currentAdminKey}`, {
+                    method: 'DELETE',
+                });
+                const result = await response.json();
+                if (!response.ok) {
+                    throw new Error(result.message || `Failed to delete logo: ${response.statusText}`);
+                }
+                setStatusMessage('Logo deleted successfully.', false);
+                await loadLogos(); // Refresh grid
+            } catch (error) {
+                console.error('Error deleting logo:', error);
+                setStatusMessage(`Error: ${error.message}`, true);
+            }
+        }
+
+        async function handleClearVotes() {
+             if (!isAdmin || !currentAdminKey || !currentNamespaceId) return;
+
+            if (!confirm('Are you sure you want to clear ALL votes for this namespace? This cannot be undone.')) {
+                return;
+            }
+
+            setStatusMessage('Clearing votes...', false);
+            try {
+                const response = await fetch(`${apiUrl}/clear-votes?namespace=${currentNamespaceId}&admin=${currentAdminKey}`, {
+                    method: 'POST',
+                });
+                 const result = await response.json();
+                if (!response.ok) {
+                    throw new Error(result.message || `Failed to clear votes: ${response.statusText}`);
+                }
+                setStatusMessage('All votes cleared successfully.', false);
+                await loadLogos(); // Refresh grid to show zero votes
+            } catch (error) {
+                console.error('Error clearing votes:', error);
+                setStatusMessage(`Error: ${error.message}`, true);
+            }
+        }
+
+        async function handleDeleteNamespace() {
+             if (!isAdmin || !currentAdminKey || !currentNamespaceId) return;
+
+            if (!confirm('WARNING: Are you sure you want to delete this ENTIRE namespace, including all logos and votes? This cannot be undone.')) {
+                return;
+            }
+
+             setStatusMessage('Deleting namespace...', false);
+            try {
+                const response = await fetch(`${apiUrl}/namespace?namespace=${currentNamespaceId}&admin=${currentAdminKey}`, {
+                    method: 'DELETE',
+                });
+                 const result = await response.json();
+                if (!response.ok) {
+                    throw new Error(result.message || `Failed to delete namespace: ${response.statusText}`);
+                }
+                setStatusMessage('Namespace deleted successfully. Redirecting...', false);
+                // Redirect to home page after deletion
+                setTimeout(() => {
+                    window.location.href = window.location.origin + window.location.pathname;
+                }, 2000);
+
+            } catch (error) {
+                console.error('Error deleting namespace:', error);
+                setStatusMessage(`Error: ${error.message}`, true);
+            }
+        }
+
+        // --- Logo Viewer Modal Control ---
+        function openLogoViewer(index) {
+            if (index < 0 || index >= displayedLogos.length) return;
+            currentLogoIndex = index;
+            showLogoAtIndex(currentLogoIndex);
+            logoViewerModal.style.display = "flex"; // Show the modal using flex
+            document.body.style.overflow = 'hidden'; // Prevent body scrolling
+        }
+
+        function closeLogoViewer() {
+            logoViewerModal.style.display = "none"; // Hide the modal
+            logoViewerImg.src = ""; // Clear src
+            currentLogoIndex = -1; // Reset index
+            document.body.style.overflow = ''; // Restore body scrolling
+        }
+
+        function showLogoAtIndex(index) {
+            if (index < 0 || index >= displayedLogos.length) return;
+
+            currentLogoIndex = index;
+            const logo = displayedLogos[index];
+            logoViewerImg.src = `${apiUrl}/data/uploads/${logo.path}`;
+            logoViewerImg.alt = `Logo ${index + 1}`;
+
+            // Update button states
+            logoViewerPrevBtn.classList.toggle('disabled', index === 0);
+            logoViewerNextBtn.classList.toggle('disabled', index === displayedLogos.length - 1);
+        }
+
+        function showPreviousLogo() {
+            if (currentLogoIndex > 0) {
+                showLogoAtIndex(currentLogoIndex - 1);
+            }
+        }
+
+        function showNextLogo() {
+            if (currentLogoIndex < displayedLogos.length - 1) {
+                showLogoAtIndex(currentLogoIndex + 1);
+            }
+        }
+
+        function handleModalVoteClick() {
+            if (currentLogoIndex !== -1 && currentLogoIndex < displayedLogos.length) {
+                const logoId = displayedLogos[currentLogoIndex].id;
+                handleVoteClick(logoId); // Reuse existing vote logic
+            }
+        }
+
+        function handleKeydown(event) {
+             // Only act if the logo viewer modal is visible
+            if (logoViewerModal.style.display === 'flex') {
+                if (event.key === 'ArrowLeft') {
+                    showPreviousLogo();
+                } else if (event.key === 'ArrowRight') {
+                    showNextLogo();
+                } else if (event.key === 'Escape') {
+                    closeLogoViewer();
+                }
+            }
+        }
+
+        // --- Modal Control ---
+        function openModal() {
+            modalError.textContent = ''; // Clear errors on open
+            identifierModal.style.display = 'block';
+        }
+
+        function closeModal() {
+            identifierModal.style.display = 'none';
+        }
+
+        // Close modal if user clicks outside of it
+        window.onclick = function(event) {
+            if (event.target == identifierModal) {
+                closeModal();
+            }
+            // Close logo viewer if clicking background (added this check here)
+            // Check if the click is directly on the modal background, not children
+            if (event.target == logoViewerModal) {
+                 closeLogoViewer();
+            }
+        }
+
+        // --- Utility ---
+        function setStatusMessage(message, isError = false) {
+            statusMessage.textContent = message;
+            statusMessage.className = `mt-6 text-center font-medium ${isError ? 'text-red-600' : 'text-green-600'}`;
+        }
+
+    </script>
+</body>
+</html>
