@@ -481,14 +481,15 @@ superadminRouter.get('/namespaces', async (req, res) => {
                         id: namespaceId,
                         createdAt: data.createdAt || 'N/A',
                         logoCount: data.logos.length,
-                        totalVotes: totalVotes
+                        totalVotes: totalVotes,
+                        adminKey: data.adminKey // --- MODIFICATION: Add adminKey ---
                     });
                 } else {
-                    namespaceDetails.push({ id: namespaceId, error: 'Could not read data' });
+                    namespaceDetails.push({ id: namespaceId, error: 'Could not read data', adminKey: null }); // Add adminKey: null for consistency
                 }
             } catch (readError) {
                 console.error(`Superadmin: Error reading namespace ${namespaceId}:`, readError);
-                namespaceDetails.push({ id: namespaceId, error: 'Error reading data' });
+                namespaceDetails.push({ id: namespaceId, error: 'Error reading data', adminKey: null }); // Add adminKey: null for consistency
             }
         }
         res.json(namespaceDetails);

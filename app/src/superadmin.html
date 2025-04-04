@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LogoVote Superadmin</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Ensure table layout handles long links */
+        table { table-layout: fixed; word-wrap: break-word; }
+        th, td { padding: 8px 4px; } /* Adjust padding */
+    </style>
 </head>
 <body class="bg-gray-100 p-8 font-sans">
 
@@ -23,20 +28,21 @@
 
         <!-- Namespace List -->
         <div class="overflow-x-auto">
-            <table class="min-w-full bg-white border border-gray-300">
+            <table class="min-w-full w-full bg-white border border-gray-300">
                 <thead class="bg-gray-200">
                     <tr>
-                        <th class="py-2 px-4 border-b text-left">Namespace ID</th>
-                        <th class="py-2 px-4 border-b text-left">Created At</th>
-                        <th class="py-2 px-4 border-b text-right">Logo Count</th>
-                        <th class="py-2 px-4 border-b text-right">Total Votes</th>
-                        <th class="py-2 px-4 border-b text-center">Actions</th>
+                        <th class="py-2 px-4 border-b text-left w-1/6">Namespace ID</th>
+                        <th class="py-2 px-4 border-b text-left w-1/6">Created At</th>
+                        <th class="py-2 px-4 border-b text-right w-[10%]">Logos</th>
+                        <th class="py-2 px-4 border-b text-right w-[10%]">Votes</th>
+                        <th class="py-2 px-4 border-b text-left w-1/4">Public Link</th>
+                        <th class="py-2 px-4 border-b text-left w-1/4">Admin Link</th>
+                        <th class="py-2 px-4 border-b text-center w-[10%]">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="namespace-list">
-                    <!-- Namespace rows will be loaded here -->
                     <tr>
-                        <td colspan="5" class="text-center py-4 text-gray-500">Loading namespaces...</td>
+                        <td colspan="7" class="text-center py-4 text-gray-500">Loading namespaces...</td>
                     </tr>
                 </tbody>
             </table>
@@ -82,18 +88,18 @@
         }
 
         async function loadNamespaces() {
-            namespaceListBody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-gray-500">Loading namespaces...</td></tr>'; // Clear and show loading
+            namespaceListBody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-gray-500">Loading namespaces...</td></tr>'; // Clear and show loading
             const namespaces = await fetchNamespaces();
 
             if (namespaces === null) {
-                 namespaceListBody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-red-500">Failed to load namespaces. Check console.</td></tr>';
-                 return; // Stop if fetch failed
+                namespaceListBody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-red-500">Failed to load namespaces. Check console.</td></tr>';
+                return; // Stop if fetch failed
             }
 
             namespaceListBody.innerHTML = ''; // Clear loading message
 
             if (namespaces.length === 0) {
-                namespaceListBody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-gray-500">No namespaces found.</td></tr>';
+                namespaceListBody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-gray-500">No namespaces found.</td></tr>';
                 setStatusMessage('No namespaces found.', false);
             } else {
                 namespaces.forEach(ns => {
@@ -107,12 +113,12 @@
         function createNamespaceRow(ns) {
             const tr = document.createElement('tr');
             tr.className = 'hover:bg-gray-50';
+            const baseAppUrl = window.location.origin + '/'; // Base URL for the main app
 
-            // Handle potential errors during listing
             if (ns.error) {
-                 tr.innerHTML = `
+                tr.innerHTML = `
                     <td class="py-2 px-4 border-b">${ns.id}</td>
-                    <td class="py-2 px-4 border-b text-red-500" colspan="3">Error: ${ns.error}</td>
+                    <td class="py-2 px-4 border-b text-red-500" colspan="5">Error: ${ns.error}</td>
                     <td class="py-2 px-4 border-b text-center">
                         <button class="text-red-500 hover:text-red-700 font-semibold" onclick="handleDeleteSingle('${ns.id}')">Delete</button>
                     </td>
@@ -120,23 +126,29 @@
                 return tr;
             }
 
-            // Format date nicely if possible
             let createdAtFormatted = 'N/A';
             if (ns.createdAt && ns.createdAt !== 'N/A') {
                 try {
                     createdAtFormatted = new Date(ns.createdAt).toLocaleString();
                 } catch (e) {
-                     console.warn(`Could not parse date: ${ns.createdAt}`);
-                     createdAtFormatted = ns.createdAt; // Show raw string if parsing fails
+                    console.warn(`Could not parse date: ${ns.createdAt}`);
+                    createdAtFormatted = ns.createdAt; // Show raw string if parsing fails
                 }
             }
 
+            const publicLink = `${baseAppUrl}?namespace=${ns.id}`;
+            const adminLink = ns.adminKey ? `${baseAppUrl}?namespace=${ns.id}&admin=${ns.adminKey}` : 'N/A';
+            const adminLinkHtml = ns.adminKey
+                ? `<a href="${adminLink}" target="_blank" class="text-blue-600 hover:underline">${adminLink}</a>`
+                : '<span class="text-gray-400">N/A</span>';
 
             tr.innerHTML = `
                 <td class="py-2 px-4 border-b">${ns.id}</td>
                 <td class="py-2 px-4 border-b">${createdAtFormatted}</td>
                 <td class="py-2 px-4 border-b text-right">${ns.logoCount ?? 'N/A'}</td>
                 <td class="py-2 px-4 border-b text-right">${ns.totalVotes ?? 'N/A'}</td>
+                <td class="py-2 px-4 border-b"><a href="${publicLink}" target="_blank" class="text-blue-600 hover:underline">${publicLink}</a></td>
+                <td class="py-2 px-4 border-b">${adminLinkHtml}</td>
                 <td class="py-2 px-4 border-b text-center">
                     <button class="text-red-500 hover:text-red-700 font-semibold" onclick="handleDeleteSingle('${ns.id}')">Delete</button>
                 </td>
@@ -156,15 +168,15 @@
                 const response = await fetch(`${apiUrlBase}/namespace/${namespaceId}`, {
                     method: 'DELETE',
                 });
-                 if (response.status === 401) {
+                if (response.status === 401) {
                      throw new Error('Unauthorized. Please refresh and login.');
                 }
-                const result = await response.json(); // Expect JSON response
+                const result = await response.json();
                 if (!response.ok) {
                     throw new Error(result.message || `Failed to delete: ${response.statusText}`);
                 }
                 setStatusMessage(result.message || `Namespace ${namespaceId} deleted.`, false);
-                await loadNamespaces(); // Refresh the list
+                await loadNamespaces();
             } catch (error) {
                 console.error(`Error deleting namespace ${namespaceId}:`, error);
                 setStatusMessage(`Error deleting ${namespaceId}: ${error.message}`, true);
@@ -181,7 +193,7 @@
                 const response = await fetch(`${apiUrlBase}/namespaces/empty`, {
                     method: 'DELETE',
                 });
-                 if (response.status === 401) {
+                if (response.status === 401) {
                      throw new Error('Unauthorized. Please refresh and login.');
                 }
                 const result = await response.json();
@@ -189,7 +201,7 @@
                      throw new Error(result.message || `Failed to delete empty namespaces: ${response.statusText}`);
                 }
                 setStatusMessage(result.message || 'Finished deleting empty namespaces.', false);
-                await loadNamespaces(); // Refresh the list
+                await loadNamespaces();
             } catch (error) {
                 console.error('Error deleting empty namespaces:', error);
                 setStatusMessage(`Error deleting empty namespaces: ${error.message}`, true);
@@ -202,11 +214,11 @@
             }
 
             setStatusMessage('Deleting ALL namespaces...', false);
-             try {
+            try {
                 const response = await fetch(`${apiUrlBase}/namespaces/all`, {
                     method: 'DELETE',
                 });
-                 if (response.status === 401) {
+                if (response.status === 401) {
                      throw new Error('Unauthorized. Please refresh and login.');
                 }
                 const result = await response.json();
@@ -214,13 +226,12 @@
                      throw new Error(result.message || `Failed to delete all namespaces: ${response.statusText}`);
                 }
                 setStatusMessage(result.message || 'Finished deleting all namespaces.', false);
-                await loadNamespaces(); // Refresh the list
+                await loadNamespaces();
             } catch (error) {
                 console.error('Error deleting all namespaces:', error);
                 setStatusMessage(`Error deleting all namespaces: ${error.message}`, true);
             }
         }
-
 
         // --- Utility ---
         function setStatusMessage(message, isError = false) {
@@ -228,9 +239,7 @@
             statusMessageDiv.className = `mb-4 text-center font-medium ${isError ? 'text-red-600' : 'text-green-600'}`;
         }
 
-        // Make handler global for inline onclick attribute
         window.handleDeleteSingle = handleDeleteSingle;
-
     </script>
 
 </body>
