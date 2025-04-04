@@ -2,10 +2,9 @@ version: '3.8'
 
 services:
   app:
-    build: . # Build the image from the Dockerfile in the current directory
     image: javimosch/logovote
-    ports:
-      - "3000:3000" # Map host port 3000 to container port 3000
+    expose:
+      - "3000" # Map host port 3000 to container port 3000
     volumes:
       - data:/app/data # Mount the local ./data directory into /app/data in the container
     environment:
@@ -15,8 +14,6 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-    env_file:
-      - app/.env
 
 volumes:
   data:
