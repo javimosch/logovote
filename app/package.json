@@ -1,7 +1,7 @@
 {
-  "name": "backend",
+  "name": "logovote",
   "version": "1.0.0",
-  "description": "",
+  "description": "A simple web application for creating namespaces where users can upload logos and vote on their favorites",
   "main": "index.js",
   "scripts": {
     "start": "node src/server.js",
@@ -9,7 +9,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
-  "author": "",
+  "author": "arancibiajav@gmail.com",
   "license": "ISC",
   "dependencies": {
     "archiver": "^7.0.1",
