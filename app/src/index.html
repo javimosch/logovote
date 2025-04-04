@@ -146,9 +146,9 @@
 
         <!-- Upload Section -->
         <div id="upload-section" class="mb-6 hidden">
-            <h2 class="text-xl font-semibold mb-2">Upload New Logo</h2>
+            <h2 class="text-xl font-semibold mb-2">Upload New Logo(s)</h2>
             <form id="upload-form" class="flex items-center space-x-4">
-                <input type="file" id="logo-file-input" name="logoFile" accept=".svg,.jpg,.jpeg,.png" required class="block w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 cursor-pointer focus:outline-none">
+                <input type="file" id="logo-file-input" name="logoFiles" accept=".svg,.jpg,.jpeg,.png" required multiple class="block w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 cursor-pointer focus:outline-none">
                 <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out">Upload</button>
             </form>
             <p id="upload-status" class="mt-2 text-sm"></p>
@@ -450,35 +450,53 @@
                 return;
             }
             if (!logoFileInput.files || logoFileInput.files.length === 0) {
-                uploadStatus.textContent = 'Please select a file to upload.';
+                uploadStatus.textContent = 'Please select one or more files to upload.';
                  uploadStatus.className = 'mt-2 text-sm text-yellow-600';
                 return;
             }
 
-            const file = logoFileInput.files[0];
-            const formData = new FormData();
-            formData.append('logoFile', file);
-
-            uploadStatus.textContent = 'Uploading...';
+            const fileCount = logoFileInput.files.length;
+            uploadStatus.textContent = `Uploading ${fileCount} file(s)...`;
             uploadStatus.className = 'mt-2 text-sm text-blue-600';
 
             try {
+                const formData = new FormData();
+                for (let i = 0; i < logoFileInput.files.length; i++) {
+                     formData.append('logoFiles', logoFileInput.files[i]); // Use the name matching backend array
+                }
+                // Alternatively, simpler:
+                // const formData = new FormData(uploadForm); // If input name is correct
+
                 const response = await fetch(`${apiUrl}/upload?namespace=${currentNamespaceId}`, {
                     method: 'POST',
                     body: formData,
-                    // 'Content-Type' header is set automatically by browser for FormData
                 });
 
                 const result = await response.json();
 
-                if (!response.ok) {
+                // --- MODIFICATION: Handle different success/error statuses ---
+                if (!response.ok && response.status !== 207) { // 207 is partial success
                     throw new Error(result.message || `Upload failed: ${response.statusText}`);
                 }
 
-                uploadStatus.textContent = `Success: ${result.message}`;
-                uploadStatus.className = 'mt-2 text-sm text-green-600';
+                // Handle full or partial success
+                if (response.status === 201) { // All successful
+                     uploadStatus.textContent = `Success: ${result.message}`;
+                     uploadStatus.className = 'mt-2 text-sm text-green-600';
+                } else if (response.status === 207) { // Partial success
+                     uploadStatus.textContent = `Partial Success: ${result.message}`;
+                     uploadStatus.className = 'mt-2 text-sm text-yellow-600';
+                     // Optionally display more details about errors from result.errors
+                     console.warn("Upload errors:", result.errors);
+                } else {
+                     // Should be caught by the !response.ok check, but as a fallback
+                     uploadStatus.textContent = `Success: ${result.message || 'Upload processed.'}`;
+                     uploadStatus.className = 'mt-2 text-sm text-green-600';
+                }
+
                 logoFileInput.value = ''; // Clear the input
                 await loadLogos(); // Refresh the grid
+                // --- END MODIFICATION ---
 
             } catch (error) {
                 console.error('Upload error:', error);
