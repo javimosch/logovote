@@ -1,9 +1,13 @@
+const path = require('path');
+require('dotenv').config();
+
 const express = require('express');
 const multer = require('multer');
 const fs = require('fs').promises;
-const path = require('path');
+
 const { v4: uuidv4 } = require('uuid');
 const cron = require('node-cron');
+const basicAuth = require('express-basic-auth');
 
 const app = express();
 const port = 3000;
@@ -12,20 +16,23 @@ const DATA_DIR = path.join(__dirname, '..', 'data');
 const NAMESPACES_DIR = path.join(DATA_DIR, 'namespaces');
 const UPLOADS_DIR = path.join(DATA_DIR, 'uploads');
 
-// Ensure data directories exist
-async function ensureDataDirs() {
-    try {
-        await fs.mkdir(NAMESPACES_DIR, { recursive: true });
-        await fs.mkdir(UPLOADS_DIR, { recursive: true });
-        console.log('Data directories ensured.');
-    } catch (err) {
-        console.error('Error creating data directories:', err);
-        process.exit(1); // Exit if we can't create essential directories
-    }
+// --- Superadmin Auth ---
+const superadminUser = process.env.SUPERADMIN_USER;
+const superadminPassword = process.env.SUPERADMIN_PASSWORD;
+
+if (!superadminUser || !superadminPassword) {
+    console.warn("WARN: SUPERADMIN_USER or SUPERADMIN_PASSWORD not set in .env file. Superadmin routes will be disabled.");
 }
 
-// --- Data Helper Functions ---
+const superadminAuthMiddleware = superadminUser && superadminPassword ? basicAuth({
+    users: { [superadminUser]: superadminPassword },
+    challenge: true,
+    realm: 'SuperAdminArea',
+}) : (req, res, next) => {
+    res.status(403).send('Superadmin access is disabled.');
+};
 
+// --- Data Helper Functions ---
 // Get the path for a namespace's JSON file
 const getNamespaceFilePath = (namespaceId) => path.join(NAMESPACES_DIR, `${namespaceId}.json`);
 
@@ -103,15 +110,21 @@ async function deleteNamespaceFiles(namespaceId) {
     return success;
 }
 
-//serve index.html at /
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
-});
+// Ensure data directories exist
+async function ensureDataDirs() {
+    try {
+        await fs.mkdir(NAMESPACES_DIR, { recursive: true });
+        await fs.mkdir(UPLOADS_DIR, { recursive: true });
+        console.log('Data directories ensured.');
+    } catch (err) {
+        console.error('Error creating data directories:', err);
+        process.exit(1);
+    }
+}
 
 // --- Middleware ---
-app.use(express.json()); // For parsing application/json
-app.use(express.static(path.join(__dirname, '..', 'frontend'))); // Serve static frontend files
-app.use('/data/uploads', express.static(UPLOADS_DIR)); // Serve uploaded files statically
+app.use(express.json());
+app.use('/data/uploads', express.static(UPLOADS_DIR));
 
 // --- Multer Setup for File Uploads ---
 const storage = multer.diskStorage({
@@ -122,14 +135,13 @@ const storage = multer.diskStorage({
         }
         const namespaceUploadDir = path.join(UPLOADS_DIR, namespaceId);
         try {
-            await fs.mkdir(namespaceUploadDir, { recursive: true }); // Ensure namespace upload dir exists
+            await fs.mkdir(namespaceUploadDir, { recursive: true });
             cb(null, namespaceUploadDir);
         } catch (err) {
             cb(err, null);
         }
     },
     filename: (req, file, cb) => {
-        // Generate a unique filename (e.g., timestamp + original name)
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
         const extension = path.extname(file.originalname);
         cb(null, uniqueSuffix + extension);
@@ -150,9 +162,9 @@ const fileFilter = (req, file, cb) => {
 
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+    limits: { fileSize: 5 * 1024 * 1024 },
     fileFilter: fileFilter
-}).single('logoFile'); // Expecting a single file named 'logoFile'
+}).single('logoFile');
 
 // --- API Endpoints ---
 
@@ -162,7 +174,7 @@ app.post('/namespace', async (req, res) => {
     const adminKey = uuidv4();
     const newNamespaceData = {
         adminKey: adminKey,
-        createdAt: new Date().toISOString(), // Add createdAt timestamp
+        createdAt: new Date().toISOString(),
         logos: []
     };
 
@@ -188,11 +200,10 @@ app.get('/logos', async (req, res) => {
         if (!data) {
             return res.status(404).json({ message: 'Namespace not found.' });
         }
-        // Return logos with relative path and vote count
         const logosResponse = data.logos.map(logo => ({
             id: logo.id,
-            path: logo.path, // Path relative to /data/uploads/
-            votes: logo.votes.length // Only return the count
+            path: logo.path,
+            votes: logo.votes.length
         }));
         res.json(logosResponse);
     } catch (error) {
@@ -206,17 +217,14 @@ app.post('/upload', (req, res) => {
         const { namespace } = req.query;
 
         if (!namespace) {
-            // Clean up uploaded file if namespace is missing after upload attempt
             if (req.file) await fs.unlink(req.file.path).catch(console.error);
             return res.status(400).json({ message: 'Namespace ID is required.' });
         }
 
         if (err instanceof multer.MulterError) {
-            // A Multer error occurred when uploading.
             console.error('Multer error:', err);
             return res.status(400).json({ message: `Upload error: ${err.message}` });
         } else if (err) {
-            // An unknown error occurred when uploading.
             console.error('Unknown upload error:', err);
             return res.status(500).json({ message: `Upload error: ${err.message}` });
         }
@@ -225,22 +233,19 @@ app.post('/upload', (req, res) => {
             return res.status(400).json({ message: 'No file uploaded or invalid file type.' });
         }
 
-        // File uploaded successfully
         try {
             const data = await readNamespaceData(namespace);
             if (!data) {
-                // Clean up uploaded file if namespace doesn't exist
                 await fs.unlink(req.file.path).catch(console.error);
                 return res.status(404).json({ message: 'Namespace not found.' });
             }
 
             const logoId = uuidv4();
-            // Store path relative to the UPLOADS_DIR base, including the namespace
             const relativePath = path.join(namespace, req.file.filename);
 
             const newLogo = {
                 id: logoId,
-                path: relativePath, // e.g., "namespace-id/filename.jpg"
+                path: relativePath,
                 votes: []
             };
 
@@ -251,11 +256,10 @@ app.post('/upload', (req, res) => {
             res.status(201).json({
                 message: 'File uploaded successfully.',
                 logoId: logoId,
-                path: `/data/uploads/${relativePath}` // Full path for client use
+                path: `/data/uploads/${relativePath}`
             });
         } catch (error) {
             console.error('Error processing upload:', error);
-            // Clean up uploaded file on error
             await fs.unlink(req.file.path).catch(console.error);
             res.status(500).json({ message: 'Failed to process upload.' });
         }
@@ -265,7 +269,7 @@ app.post('/upload', (req, res) => {
 // POST /vote?namespace=[id] - Vote for a logo
 app.post('/vote', async (req, res) => {
     const { namespace } = req.query;
-    const { logoId, identifier } = req.body; // Expecting Base64 identifier
+    const { logoId, identifier } = req.body;
 
     if (!namespace || !logoId || !identifier) {
         return res.status(400).json({ message: 'Namespace ID, Logo ID, and identifier are required.' });
@@ -282,18 +286,15 @@ app.post('/vote', async (req, res) => {
             return res.status(404).json({ message: 'Logo not found.' });
         }
 
-        // Check if identifier already voted for this logo
         if (logo.votes.includes(identifier)) {
             return res.status(409).json({ message: 'Identifier has already voted for this logo.' });
         }
 
-        // Add vote
         logo.votes.push(identifier);
         await writeNamespaceData(namespace, data);
 
         console.log(`Vote recorded for logo ${logoId} in namespace ${namespace}`);
         res.status(200).json({ message: 'Vote recorded successfully.', votes: logo.votes.length });
-
     } catch (error) {
         console.error('Error recording vote:', error);
         res.status(500).json({ message: 'Failed to record vote.' });
@@ -316,9 +317,9 @@ app.delete('/logo', async (req, res) => {
             return res.status(403).json({ message: 'Invalid Admin Key.' });
         }
 
-        const data = await readNamespaceData(namespace); // Read again after validation
+        const data = await readNamespaceData(namespace);
         if (!data) {
-             return res.status(404).json({ message: 'Namespace not found (should not happen after validation).' }); // Should be caught by validation
+            return res.status(404).json({ message: 'Namespace not found (should not happen after validation).' });
         }
 
         const logoIndex = data.logos.findIndex(l => l.id === logoId);
@@ -329,21 +330,15 @@ app.delete('/logo', async (req, res) => {
         const logoToDelete = data.logos[logoIndex];
         const logoFilePath = path.join(UPLOADS_DIR, logoToDelete.path);
 
-        // Remove logo entry from data
         data.logos.splice(logoIndex, 1);
-
-        // Write updated data first
         await writeNamespaceData(namespace, data);
 
-        // Then delete the file
         await fs.unlink(logoFilePath).catch(err => {
-            // Log error if file deletion fails, but proceed as data is updated
             console.error(`Failed to delete logo file ${logoFilePath}:`, err);
         });
 
         console.log(`Logo ${logoId} deleted from namespace ${namespace}`);
         res.status(200).json({ message: 'Logo deleted successfully.' });
-
     } catch (error) {
         console.error('Error deleting logo:', error);
         res.status(500).json({ message: 'Failed to delete logo.' });
@@ -365,11 +360,10 @@ app.post('/clear-votes', async (req, res) => {
         }
 
         const data = await readNamespaceData(namespace);
-         if (!data) {
-             return res.status(404).json({ message: 'Namespace not found.' });
+        if (!data) {
+            return res.status(404).json({ message: 'Namespace not found.' });
         }
 
-        // Clear votes for all logos
         data.logos.forEach(logo => {
             logo.votes = [];
         });
@@ -378,7 +372,6 @@ app.post('/clear-votes', async (req, res) => {
 
         console.log(`Votes cleared for namespace ${namespace}`);
         res.status(200).json({ message: 'All votes cleared successfully.' });
-
     } catch (error) {
         console.error('Error clearing votes:', error);
         res.status(500).json({ message: 'Failed to clear votes.' });
@@ -399,28 +392,21 @@ app.delete('/namespace', async (req, res) => {
             return res.status(403).json({ message: 'Invalid Admin Key.' });
         }
 
-        // Use the refactored deletion logic
         const deleted = await deleteNamespaceFiles(namespace);
 
         if (deleted) {
-             console.log(`Namespace ${namespace} deleted via API request.`);
-             res.status(200).json({ message: 'Namespace deleted successfully.' });
+            console.log(`Namespace ${namespace} deleted via API request.`);
+            res.status(200).json({ message: 'Namespace deleted successfully.' });
         } else {
-            // If deleteNamespaceFiles returned false, it means an error occurred during deletion
-            // which was already logged. Send a generic server error.
-             res.status(500).json({ message: 'Failed to completely delete namespace. Check server logs.' });
+            res.status(500).json({ message: 'Failed to completely delete namespace. Check server logs.' });
         }
-
     } catch (error) {
-        // Catch errors from validateAdminKey or other unexpected issues
         console.error('Error processing namespace deletion request:', error);
         res.status(500).json({ message: 'Failed to delete namespace.' });
     }
 });
 
 // --- Cron Job for Pruning Old, Empty Namespaces ---
-// Schedule to run once daily at midnight ('0 0 * * *')
-// For testing, you might use '*/5 * * * *' (every 5 seconds) or '0 * * * *' (every hour)
 cron.schedule('0 0 * * *', async () => {
     console.log('[Cron] Running job to prune old, empty namespaces...');
     const thirtyDaysAgo = new Date();
@@ -442,27 +428,20 @@ cron.schedule('0 0 * * *', async () => {
                     continue;
                 }
 
-                // Check 1: createdAt exists and is older than 30 days
                 const createdAt = data.createdAt ? new Date(data.createdAt) : null;
                 if (!createdAt || createdAt >= thirtyDaysAgo) {
-                    // console.log(`[Cron] Skipping ${namespaceId}: Not old enough or no createdAt timestamp.`);
                     continue;
                 }
 
-                // Check 2: Total votes across all logos is 0
                 const totalVotes = data.logos.reduce((sum, logo) => sum + (logo.votes ? logo.votes.length : 0), 0);
                 if (totalVotes > 0) {
-                    // console.log(`[Cron] Skipping ${namespaceId}: Has ${totalVotes} total votes.`);
                     continue;
                 }
 
-                // If both checks pass, prune the namespace
                 console.log(`[Cron] Pruning namespace ${namespaceId}: Older than 30 days (${createdAt.toISOString()}) and has 0 votes.`);
-                await deleteNamespaceFiles(namespaceId); // Use refactored deletion logic
-
+                await deleteNamespaceFiles(namespaceId);
             } catch (readError) {
                 console.error(`[Cron] Error processing namespace ${namespaceId}:`, readError);
-                // Continue to the next namespace file
             }
         }
         console.log('[Cron] Pruning job finished.');
@@ -470,6 +449,179 @@ cron.schedule('0 0 * * *', async () => {
         console.error('[Cron] Error during the pruning job execution:', cronError);
     }
 });
+
+// --- Superadmin Routes ---
+const superadminRouter = express.Router();
+
+// Apply auth middleware to all superadmin routes *except* the HTML page itself initially
+// We apply it within the router for API calls, and separately for the HTML page GET request
+// superadminRouter.use(superadminAuthMiddleware); // Moved auth to specific routes or main app level
+
+// --- MODIFICATION START: Serve superadmin.html ---
+// GET /superadmin - Serve the HTML page (apply auth here)
+app.get('/superadmin', superadminAuthMiddleware, (req, res) => {
+    res.sendFile(path.join(__dirname, 'superadmin.html'));
+});
+// --- MODIFICATION END ---
+
+// GET /superadmin/namespaces - List all namespaces (API)
+superadminRouter.get('/namespaces', async (req, res) => {
+    try {
+        const files = await fs.readdir(NAMESPACES_DIR);
+        const namespaceFiles = files.filter(file => file.endsWith('.json'));
+        const namespaceDetails = [];
+
+        for (const file of namespaceFiles) {
+            const namespaceId = file.replace('.json', '');
+            try {
+                const data = await readNamespaceData(namespaceId);
+                if (data) {
+                    const totalVotes = data.logos.reduce((sum, logo) => sum + (logo.votes ? logo.votes.length : 0), 0);
+                    namespaceDetails.push({
+                        id: namespaceId,
+                        createdAt: data.createdAt || 'N/A',
+                        logoCount: data.logos.length,
+                        totalVotes: totalVotes
+                    });
+                } else {
+                    namespaceDetails.push({ id: namespaceId, error: 'Could not read data' });
+                }
+            } catch (readError) {
+                console.error(`Superadmin: Error reading namespace ${namespaceId}:`, readError);
+                namespaceDetails.push({ id: namespaceId, error: 'Error reading data' });
+            }
+        }
+        res.json(namespaceDetails);
+    } catch (error) {
+        console.error('Superadmin: Error listing namespaces:', error);
+        res.status(500).json({ message: 'Failed to list namespaces.' });
+    }
+});
+
+// DELETE /superadmin/namespace/:namespaceId - Delete a specific namespace (API)
+superadminRouter.delete('/namespace/:namespaceId', async (req, res) => {
+    const { namespaceId } = req.params;
+    console.log(`Superadmin: Received request to delete namespace ${namespaceId}`);
+    try {
+        const deleted = await deleteNamespaceFiles(namespaceId);
+        if (deleted) {
+            console.log(`Superadmin: Namespace ${namespaceId} deleted successfully.`);
+            res.status(200).json({ message: `Namespace ${namespaceId} deleted successfully.` });
+        } else {
+            console.warn(`Superadmin: Namespace ${namespaceId} deletion reported issues (check logs).`);
+            res.status(200).json({ message: `Namespace ${namespaceId} deletion process completed. Some files might not have existed.` });
+        }
+    } catch (error) {
+        console.error(`Superadmin: Error deleting namespace ${namespaceId}:`, error);
+        res.status(500).json({ message: `Failed to delete namespace ${namespaceId}.` });
+    }
+});
+
+// DELETE /superadmin/namespaces/all - Delete ALL namespaces (API)
+superadminRouter.delete('/namespaces/all', async (req, res) => {
+    console.log('Superadmin: Received request to delete ALL namespaces.');
+    let successCount = 0;
+    let failCount = 0;
+    let notFoundCount = 0;
+    let namespacesToDelete = [];
+
+    try {
+        const files = await fs.readdir(NAMESPACES_DIR);
+        namespacesToDelete = files.filter(file => file.endsWith('.json')).map(file => file.replace('.json', ''));
+        console.log(`Superadmin: Found ${namespacesToDelete.length} namespaces to attempt deletion.`);
+
+        for (const namespaceId of namespacesToDelete) {
+            try {
+                const deleted = await deleteNamespaceFiles(namespaceId);
+                if (deleted) {
+                    successCount++;
+                } else {
+                    notFoundCount++;
+                }
+            } catch (deleteError) {
+                console.error(`Superadmin: Error during bulk delete for namespace ${namespaceId}:`, deleteError);
+                failCount++;
+            }
+        }
+
+        const message = `Deleted ${successCount} namespaces. ${notFoundCount} namespaces reported issues (e.g., already deleted). ${failCount} failed with errors.`;
+        console.log(`Superadmin: Bulk delete finished. ${message}`);
+        res.status(200).json({ message });
+
+    } catch (error) {
+        console.error('Superadmin: Error listing namespaces for bulk delete:', error);
+        res.status(500).json({ message: 'Failed to list namespaces for deletion.' });
+    }
+});
+
+// DELETE /superadmin/namespaces/empty - Delete namespaces with zero votes (API)
+superadminRouter.delete('/namespaces/empty', async (req, res) => {
+    console.log('Superadmin: Received request to delete empty namespaces.');
+    let deletedCount = 0;
+    let checkedCount = 0;
+    let errorCount = 0;
+
+    try {
+        const files = await fs.readdir(NAMESPACES_DIR);
+        const namespaceFiles = files.filter(file => file.endsWith('.json'));
+        checkedCount = namespaceFiles.length;
+        console.log(`Superadmin: Found ${checkedCount} namespaces to check for emptiness.`);
+
+        for (const file of namespaceFiles) {
+            const namespaceId = file.replace('.json', '');
+            try {
+                const data = await readNamespaceData(namespaceId);
+                if (!data) {
+                    console.warn(`Superadmin: Skipping empty check for ${namespaceId}, could not read data.`);
+                    continue;
+                }
+
+                const totalVotes = data.logos.reduce((sum, logo) => sum + (logo.votes ? logo.votes.length : 0), 0);
+
+                if (totalVotes === 0) {
+                    console.log(`Superadmin: Namespace ${namespaceId} has 0 votes. Deleting...`);
+                    const deleted = await deleteNamespaceFiles(namespaceId);
+                    if (deleted) {
+                        deletedCount++;
+                    } else {
+                        console.warn(`Superadmin: Deletion of empty namespace ${namespaceId} reported issues (check logs).`);
+                        errorCount++;
+                    }
+                }
+            } catch (processError) {
+                console.error(`Superadmin: Error processing namespace ${namespaceId} for empty deletion:`, processError);
+                errorCount++;
+            }
+        }
+
+        const message = `Checked ${checkedCount} namespaces. Deleted ${deletedCount} empty namespaces. Encountered ${errorCount} errors or issues during processing.`;
+        console.log(`Superadmin: Empty deletion finished. ${message}`);
+        res.status(200).json({ message });
+
+    } catch (error) {
+        console.error('Superadmin: Error listing namespaces for empty deletion:', error);
+        res.status(500).json({ message: 'Failed to list namespaces for empty deletion.' });
+    }
+});
+
+// Mount the superadmin API router under /superadmin path, applying auth
+if (superadminUser && superadminPassword) {
+    // Apply auth middleware specifically to the API router
+    app.use('/superadmin', superadminAuthMiddleware, superadminRouter);
+    console.log("Superadmin API routes enabled at /superadmin");
+} else {
+     // If disabled, still mount a handler to inform the user for API paths
+     app.use('/superadmin/*', (req, res) => {
+         res.status(403).send('Superadmin access is disabled.');
+     });
+}
+
+// --- Serve index.html at root --- Added Section ---
+// Ensure this is defined *after* other specific routes like /superadmin
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+// --- End Added Section ---
 
 // --- Server Start ---
 ensureDataDirs().then(() => {

@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LogoVote Superadmin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8 font-sans">
+
+    <div class="container mx-auto bg-white p-6 rounded-lg shadow-md">
+        <h1 class="text-3xl font-bold mb-6 text-center text-red-600">LogoVote Superadmin</h1>
+
+        <!-- Action Buttons -->
+        <div class="mb-6 flex space-x-4">
+            <button id="refresh-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out">Refresh List</button>
+            <button id="delete-empty-btn" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out">Delete Empty Namespaces</button>
+            <button id="delete-all-btn" class="bg-red-700 hover:bg-red-800 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out">Delete ALL Namespaces</button>
+        </div>
+
+        <!-- Status Message Area -->
+        <div id="status-message" class="mb-4 text-center font-medium"></div>
+
+        <!-- Namespace List -->
+        <div class="overflow-x-auto">
+            <table class="min-w-full bg-white border border-gray-300">
+                <thead class="bg-gray-200">
+                    <tr>
+                        <th class="py-2 px-4 border-b text-left">Namespace ID</th>
+                        <th class="py-2 px-4 border-b text-left">Created At</th>
+                        <th class="py-2 px-4 border-b text-right">Logo Count</th>
+                        <th class="py-2 px-4 border-b text-right">Total Votes</th>
+                        <th class="py-2 px-4 border-b text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="namespace-list">
+                    <!-- Namespace rows will be loaded here -->
+                    <tr>
+                        <td colspan="5" class="text-center py-4 text-gray-500">Loading namespaces...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const apiUrlBase = '/superadmin'; // Base path for superadmin API calls
+        const namespaceListBody = document.getElementById('namespace-list');
+        const refreshBtn = document.getElementById('refresh-btn');
+        const deleteEmptyBtn = document.getElementById('delete-empty-btn');
+        const deleteAllBtn = document.getElementById('delete-all-btn');
+        const statusMessageDiv = document.getElementById('status-message');
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            loadNamespaces();
+
+            refreshBtn.addEventListener('click', loadNamespaces);
+            deleteEmptyBtn.addEventListener('click', handleDeleteEmpty);
+            deleteAllBtn.addEventListener('click', handleDeleteAll);
+        });
+
+        // --- API Interaction ---
+
+        async function fetchNamespaces() {
+            setStatusMessage('Loading namespaces...', false);
+            try {
+                const response = await fetch(`${apiUrlBase}/namespaces`); // GET is default
+                if (response.status === 401) {
+                     throw new Error('Unauthorized. Please refresh and login.');
+                }
+                if (!response.ok) {
+                    const errorData = await response.text(); // Use text for potential non-JSON errors
+                    throw new Error(`Failed to fetch namespaces: ${response.status} ${response.statusText} - ${errorData}`);
+                }
+                return await response.json();
+            } catch (error) {
+                console.error('Error fetching namespaces:', error);
+                setStatusMessage(`Error loading namespaces: ${error.message}`, true);
+                return null; // Indicate failure
+            }
+        }
+
+        async function loadNamespaces() {
+            namespaceListBody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-gray-500">Loading namespaces...</td></tr>'; // Clear and show loading
+            const namespaces = await fetchNamespaces();
+
+            if (namespaces === null) {
+                 namespaceListBody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-red-500">Failed to load namespaces. Check console.</td></tr>';
+                 return; // Stop if fetch failed
+            }
+
+            namespaceListBody.innerHTML = ''; // Clear loading message
+
+            if (namespaces.length === 0) {
+                namespaceListBody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-gray-500">No namespaces found.</td></tr>';
+                setStatusMessage('No namespaces found.', false);
+            } else {
+                namespaces.forEach(ns => {
+                    const row = createNamespaceRow(ns);
+                    namespaceListBody.appendChild(row);
+                });
+                setStatusMessage(`Loaded ${namespaces.length} namespaces.`, false);
+            }
+        }
+
+        function createNamespaceRow(ns) {
+            const tr = document.createElement('tr');
+            tr.className = 'hover:bg-gray-50';
+
+            // Handle potential errors during listing
+            if (ns.error) {
+                 tr.innerHTML = `
+                    <td class="py-2 px-4 border-b">${ns.id}</td>
+                    <td class="py-2 px-4 border-b text-red-500" colspan="3">Error: ${ns.error}</td>
+                    <td class="py-2 px-4 border-b text-center">
+                        <button class="text-red-500 hover:text-red-700 font-semibold" onclick="handleDeleteSingle('${ns.id}')">Delete</button>
+                    </td>
+                `;
+                return tr;
+            }
+
+            // Format date nicely if possible
+            let createdAtFormatted = 'N/A';
+            if (ns.createdAt && ns.createdAt !== 'N/A') {
+                try {
+                    createdAtFormatted = new Date(ns.createdAt).toLocaleString();
+                } catch (e) {
+                     console.warn(`Could not parse date: ${ns.createdAt}`);
+                     createdAtFormatted = ns.createdAt; // Show raw string if parsing fails
+                }
+            }
+
+
+            tr.innerHTML = `
+                <td class="py-2 px-4 border-b">${ns.id}</td>
+                <td class="py-2 px-4 border-b">${createdAtFormatted}</td>
+                <td class="py-2 px-4 border-b text-right">${ns.logoCount ?? 'N/A'}</td>
+                <td class="py-2 px-4 border-b text-right">${ns.totalVotes ?? 'N/A'}</td>
+                <td class="py-2 px-4 border-b text-center">
+                    <button class="text-red-500 hover:text-red-700 font-semibold" onclick="handleDeleteSingle('${ns.id}')">Delete</button>
+                </td>
+            `;
+            return tr;
+        }
+
+        // --- Event Handlers ---
+
+        async function handleDeleteSingle(namespaceId) {
+            if (!confirm(`Are you sure you want to delete namespace "${namespaceId}"? This cannot be undone.`)) {
+                return;
+            }
+
+            setStatusMessage(`Deleting namespace ${namespaceId}...`, false);
+            try {
+                const response = await fetch(`${apiUrlBase}/namespace/${namespaceId}`, {
+                    method: 'DELETE',
+                });
+                 if (response.status === 401) {
+                     throw new Error('Unauthorized. Please refresh and login.');
+                }
+                const result = await response.json(); // Expect JSON response
+                if (!response.ok) {
+                    throw new Error(result.message || `Failed to delete: ${response.statusText}`);
+                }
+                setStatusMessage(result.message || `Namespace ${namespaceId} deleted.`, false);
+                await loadNamespaces(); // Refresh the list
+            } catch (error) {
+                console.error(`Error deleting namespace ${namespaceId}:`, error);
+                setStatusMessage(`Error deleting ${namespaceId}: ${error.message}`, true);
+            }
+        }
+
+        async function handleDeleteEmpty() {
+            if (!confirm('Are you sure you want to delete ALL namespaces with ZERO votes? This cannot be undone.')) {
+                return;
+            }
+
+            setStatusMessage('Deleting empty namespaces...', false);
+            try {
+                const response = await fetch(`${apiUrlBase}/namespaces/empty`, {
+                    method: 'DELETE',
+                });
+                 if (response.status === 401) {
+                     throw new Error('Unauthorized. Please refresh and login.');
+                }
+                const result = await response.json();
+                if (!response.ok) {
+                     throw new Error(result.message || `Failed to delete empty namespaces: ${response.statusText}`);
+                }
+                setStatusMessage(result.message || 'Finished deleting empty namespaces.', false);
+                await loadNamespaces(); // Refresh the list
+            } catch (error) {
+                console.error('Error deleting empty namespaces:', error);
+                setStatusMessage(`Error deleting empty namespaces: ${error.message}`, true);
+            }
+        }
+
+        async function handleDeleteAll() {
+            if (!confirm('WARNING: Are you sure you want to delete ALL namespaces? This will remove all data and cannot be undone.')) {
+                return;
+            }
+
+            setStatusMessage('Deleting ALL namespaces...', false);
+             try {
+                const response = await fetch(`${apiUrlBase}/namespaces/all`, {
+                    method: 'DELETE',
+                });
+                 if (response.status === 401) {
+                     throw new Error('Unauthorized. Please refresh and login.');
+                }
+                const result = await response.json();
+                if (!response.ok) {
+                     throw new Error(result.message || `Failed to delete all namespaces: ${response.statusText}`);
+                }
+                setStatusMessage(result.message || 'Finished deleting all namespaces.', false);
+                await loadNamespaces(); // Refresh the list
+            } catch (error) {
+                console.error('Error deleting all namespaces:', error);
+                setStatusMessage(`Error deleting all namespaces: ${error.message}`, true);
+            }
+        }
+
+
+        // --- Utility ---
+        function setStatusMessage(message, isError = false) {
+            statusMessageDiv.textContent = message;
+            statusMessageDiv.className = `mb-4 text-center font-medium ${isError ? 'text-red-600' : 'text-green-600'}`;
+        }
+
+        // Make handler global for inline onclick attribute
+        window.handleDeleteSingle = handleDeleteSingle;
+
+    </script>
+
+</body>
+</html>
