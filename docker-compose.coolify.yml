@@ -7,13 +7,5 @@ services:
       - "3000" # Map host port 3000 to container port 3000
     volumes:
       - data:/app/data # Mount the local ./data directory into /app/data in the container
-    environment:
-      - NODE_ENV=development # Optional: Set environment, e.g., for logging
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000"] # Basic check if server responds
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
 volumes:
   data:
