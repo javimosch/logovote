@@ -3,3 +3,6 @@ app/data/namespaces/*
 app/node_modules
 node_modules
 .env
+.zip
+.roomodes
+boomerang*
