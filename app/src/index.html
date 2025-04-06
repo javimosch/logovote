@@ -10,24 +10,30 @@
     <style>
         /* Basic styling for modal */
         .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); }
-        .modal-content { background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 400px; }
-        .close-button { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .modal-content { background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 400px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+        .close-button { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; transition: color 0.2s; }
+        .close-button:hover { color: #666; }
 
         /* Styling for Logo Viewer Modal */
         .logo-viewer-modal {
-            display: none; /* Hidden by default */
-            position: fixed; /* Stay in place */
-            z-index: 1000; /* Sit on top */
+            display: none;
+            position: fixed;
+            z-index: 1000;
             left: 0;
             top: 0;
-            width: 100%; /* Full width */
-            height: 100%; /* Full height */
-            overflow: hidden; /* Prevent scrollbars on body when modal is open */
-            background-color: rgba(0,0,0,0.85); /* Black w/ opacity */
-            display: flex; /* Use flexbox for centering */
-            flex-direction: column; /* Stack elements vertically */
-            justify-content: center; /* Center vertically */
-            align-items: center; /* Center horizontally */
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: rgba(0,0,0,0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+        .logo-viewer-modal.visible {
+            opacity: 1;
         }
 
         .logo-viewer-content {
@@ -106,21 +112,19 @@
 </head>
 <body class="bg-gray-100 p-8 font-sans">
 
-            <!-- --- NEW: Language Switcher --- -->
-        <div class="lang-switcher mb-4">
-            <a id="lang-en" class="px-3 py-1">EN</a>
-            <a id="lang-fr" class="px-3 py-1">FR</a>
+        <div class="lang-switcher mb-4 flex justify-end space-x-2">
+            <a id="lang-en" class="px-3 py-1 rounded transition-colors duration-150 cursor-pointer">EN</a>
+            <a id="lang-fr" class="px-3 py-1 rounded transition-colors duration-150 cursor-pointer">FR</a>
         </div>
-        <!-- --- END NEW --- -->
         <div class="container mx-auto bg-white p-6 rounded-lg shadow-md">
-        <h1 class="text-3xl font-bold mb-6 text-center text-blue-600" data-i18n="appTitle">VoteImage Tool</h1>
+        <h1 class="text-3xl font-bold mb-6 text-center text-blue-600 hover:text-blue-700 transition-colors duration-150" data-i18n="appTitle">VoteImage Tool</h1>
 
-        <!-- Namespace Info -->
-        <div id="namespace-info" class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded">
+        <!-- Namespace Info with enhanced styling -->
+        <div id="namespace-info" class="mb-6 p-6 bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-lg shadow-sm">
             
             <div id="admin-controls-section" class="hidden mt-4 space-y-4">
                 <h2 class="text-xl font-semibold mb-2" data-i18n="currentNamespace">Current Namespace</h2>
-                <p id="current-namespace-id" class="mb-2">Loading...</p>
+                <p id="current-namespace-id" class="mb-2 font-mono bg-gray-100 p-2 rounded">Loading...</p>
                 <h3 class="font-semibold text-lg text-red-600" data-i18n="adminControls">Admin Controls</h3>
                 <div>
                     <label for="friendly-url-input" class="block text-sm font-medium text-gray-700 mb-1" data-i18n="friendlyUrlLabel">Friendly URL Name:</label>
@@ -135,37 +139,52 @@
                     <button id="delete-namespace-btn" data-i18n="deleteNamespaceBtn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out">Delete This Namespace</button>
                 </div>
             </div>
-             <div id="namespace-links" class="hidden mt-4 space-y-2">
-                 <h3 class="font-semibold text-lg" data-i18n="shareLinks">Share Links</h3>
-                 <p><strong data-i18n="votingLink">Voting Link:</strong> <a id="voting-link" href="#" class="text-blue-500 hover:underline" target="_blank"></a></p>
-                 <p id="friendly-link-p" class="hidden"><strong data-i18n="friendlyLink">Friendly Link:</strong> <a id="friendly-link" href="#" class="text-purple-600 hover:underline" target="_blank"></a></p>
-                 <p><strong data-i18n="adminLink">Admin Link:</strong> <a id="admin-link" href="#" class="text-red-500 hover:underline" target="_blank"></a> <span class="text-sm text-gray-600" data-i18n="adminLinkNote">(Keep this safe!)</span></p>
-             </div>
+            <div id="namespace-links" class="hidden mt-6 space-y-3 bg-white p-4 rounded-lg shadow-sm">
+                <h3 class="font-semibold text-lg" data-i18n="shareLinks">Share Links</h3>
+                <div class="space-y-2">
+                    <p class="flex flex-col md:flex-row md:items-center gap-2">
+                        <strong class="md:w-24" data-i18n="votingLink">Voting Link:</strong>
+                        <a id="voting-link" href="#" class="text-blue-500 hover:text-blue-600 break-all font-mono text-sm" target="_blank"></a>
+                    </p>
+                    <p id="friendly-link-p" class="hidden flex flex-col md:flex-row md:items-center gap-2">
+                        <strong class="md:w-24" data-i18n="friendlyLink">Friendly Link:</strong>
+                        <a id="friendly-link" href="#" class="text-purple-600 hover:text-purple-700 break-all font-mono text-sm" target="_blank"></a>
+                    </p>
+                    <p class="flex flex-col md:flex-row md:items-center gap-2">
+                        <strong class="md:w-24" data-i18n="adminLink">Admin Link:</strong>
+                        <a id="admin-link" href="#" class="text-red-500 hover:text-red-600 break-all font-mono text-sm" target="_blank"></a>
+                        <span class="text-sm text-gray-600 italic" data-i18n="adminLinkNote">(Keep this safe!)</span>
+                    </p>
+                </div>
+            </div>
         </div>
 
         <!-- Create Namespace Section -->
-        <div id="create-namespace-section" class="mb-6 text-center">
-             <p id="welcome-message" data-i18n="welcomeMessage" class="mb-4 text-lg">Welcome! Create a new voting namespace or access an existing one using the URL.</p>
-            <button id="create-namespace-btn" data-i18n="createNamespaceBtn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out">Create New Vote Namespace</button>
+        <div id="create-namespace-section" class="mb-8 text-center">
+            <p id="welcome-message" class="mb-6 text-lg text-gray-700" data-i18n="welcomeMessage">Welcome! Create a new voting namespace or access an existing one using the URL.</p>
+            <button id="create-namespace-btn" class="primary-button text-lg px-6 py-3" data-i18n="createNamespaceBtn">Create New Vote Namespace</button>
         </div>
 
-        <!-- Upload Section -->
-        <div id="upload-section" class="mb-6 hidden">
-            <h2 class="text-xl font-semibold mb-2" data-i18n="uploadLogosTitle">Upload New Logo(s)</h2>
-            <form id="upload-form" class="flex items-center space-x-4">
-                <input type="file" id="logo-file-input" name="logoFiles" accept=".svg,.jpg,.jpeg,.png" required multiple class="block w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 cursor-pointer focus:outline-none">
-                <button type="submit" data-i18n="uploadBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out">Upload</button>
-            </form>
-            <p id="upload-status" class="mt-2 text-sm"></p>
+        <!-- Upload Section with enhanced styling -->
+        <div id="upload-section" class="mb-8 hidden">
+            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                <h2 class="text-xl font-semibold mb-4" data-i18n="uploadLogosTitle">Upload New Logo(s)</h2>
+                <form id="upload-form" class="space-y-4">
+                    <input type="file" id="logo-file-input" name="logoFiles" accept=".svg,.jpg,.jpeg,.png" required multiple 
+                           class="block w-full text-sm text-gray-900 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                    <button type="submit" class="primary-button w-full md:w-auto" data-i18n="uploadBtn">Upload</button>
+                </form>
+                <p id="upload-status" class="mt-3 text-sm"></p>
+            </div>
         </div>
 
-        <!-- Logo Grid -->
+        <!-- Logo Grid with enhanced styling -->
         <div id="logo-grid-section" class="hidden">
-            <h2 class="text-xl font-semibold mb-4" data-i18n="voteOnLogosTitle">Vote on Logos</h2>
-            <div id="logo-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 px-2 sm:px-0">
+            <h2 class="text-xl font-semibold mb-6" data-i18n="voteOnLogosTitle">Vote on Logos</h2>
+            <div id="logo-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 <!-- Logos will be loaded here -->
             </div>
-             <p id="no-logos-message" data-i18n="noLogosMessage" class="text-center text-gray-500 hidden">No logos uploaded yet for this namespace.</p>
+            <p id="no-logos-message" class="text-center text-gray-500 mt-8 hidden" data-i18n="noLogosMessage">No logos uploaded yet for this namespace.</p>
         </div>
 
         <!-- Identifier Modal -->
@@ -191,8 +210,8 @@
             </div>
         </div>
 
-        <!-- General Status/Error Message Area -->
-        <div id="status-message" class="mt-6 text-center font-medium"></div>
+        <!-- Status Message Area -->
+        <div id="status-message" class="mt-6 text-center font-medium status-message"></div>
 
     </div>
 
