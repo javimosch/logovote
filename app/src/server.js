@@ -1015,7 +1015,9 @@ app.get('/v/:friendlyUrlName', (req, res) => {
 });
 
 // --- Serve index.html at root ---
+const DEFAULT_LANG = process.env.DEFAULT_LANG || 'fr'; // Default to French if not set
 app.get('/', (req, res) => {
+    res.setHeader('X-Default-Lang', DEFAULT_LANG);
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 

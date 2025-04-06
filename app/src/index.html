@@ -97,17 +97,36 @@
             z-index: 1001; /* Above the image */
         }
 
-        /* --- NEW: Style for language switcher --- */
+        /* Enhanced language switcher */
         .lang-switcher {
             @apply flex justify-end space-x-2 text-sm md:text-base;
         }
         .lang-switcher a {
-            @apply px-2 py-1 rounded hover:bg-gray-100 transition-colors;
+            @apply px-3 py-1 rounded transition-all duration-150 cursor-pointer;
+            position: relative;
         }
         .lang-switcher a.active {
-            @apply bg-blue-100 text-blue-800 hover:bg-blue-100;
+            background-color: #3B82F6;
+            color: white;
+            font-weight: 600;
         }
-        /* --- END NEW --- */
+        .lang-switcher a:not(.active):hover {
+            background-color: #F1F1F1;
+        }
+        .lang-switcher a::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 50%;
+            width: 0;
+            height: 2px;
+            @apply bg-blue-600;
+            transition: all 0.3s ease;
+            transform: translateX(-50%);
+        }
+        .lang-switcher a:not(.active):hover::after {
+            width: 100%;
+        }
     </style>
 </head>
 <body class="bg-gray-100 p-8 font-sans">
@@ -221,13 +240,49 @@
         let currentLanguage = 'en';
         let translations = {};
 
+        async function getDefaultLanguage() {
+            try {
+                // Get default language from server response headers
+                const response = await fetch(window.location.pathname);
+                const defaultLang = response.headers.get('X-Default-Lang') || 'fr';
+                return defaultLang;
+            } catch (error) {
+                console.warn('Could not fetch default language:', error);
+                return 'fr'; // Fallback to French
+            }
+        }
+        
         function getPreferredLanguage() {
+            // Check localStorage first
             const storedLang = localStorage.getItem('preferredLanguage');
             if (storedLang && supportedLanguages.includes(storedLang)) {
                 return storedLang;
             }
+            
+            // Then check browser language
             const browserLang = navigator.language.split('-')[0];
-            return supportedLanguages.includes(browserLang) ? browserLang : 'en';
+            if (supportedLanguages.includes(browserLang)) {
+                return browserLang;
+            }
+        
+            // Return default (will be set during initialization)
+            return currentLanguage;
+        }
+        
+        function updateLanguageSwitcher() {
+            document.querySelectorAll('.lang-switcher a').forEach(a => {
+                const lang = a.id.split('-')[1];
+                if (lang === currentLanguage) {
+                    a.classList.add('active');
+                } else {
+                    a.classList.remove('active');
+                }
+                // Add aria attributes for accessibility
+                a.setAttribute('aria-pressed', lang === currentLanguage);
+                a.setAttribute('role', 'button');
+            });
+            // Update HTML lang attribute
+            document.documentElement.lang = currentLanguage;
         }
 
         async function loadTranslations(lang) {
@@ -311,6 +366,8 @@
             localStorage.setItem('preferredLanguage', lang);
             await loadTranslations(lang);
             translatePage();
+            updateLanguageSwitcher(); // Make sure to call this after changing language
+            
             if (currentNamespaceId) {
                 await loadLogos();
                 const currentStatusText = statusMessage.textContent;
@@ -373,8 +430,19 @@
         // --- Initialization ---
         document.addEventListener('DOMContentLoaded', async () => { // Make async
             // --- I18N START ---
-            currentLanguage = getPreferredLanguage();
+            // Set default language first
+            currentLanguage = await getDefaultLanguage();
+            
+            // Then check for user preference
+            const preferredLang = getPreferredLanguage();
+            if (preferredLang !== currentLanguage) {
+                currentLanguage = preferredLang;
+            }
+            
             await loadTranslations(currentLanguage);
+            translatePage();
+            updateLanguageSwitcher(); // Make sure this is called after setting the language
+            
             // Attach language switcher listeners
             document.getElementById('lang-en').addEventListener('click', () => setLanguage('en'));
             document.getElementById('lang-fr').addEventListener('click', () => setLanguage('fr'));
