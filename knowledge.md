@@ -1,8 +1,8 @@
-# Logovote Project Knowledge
+# Voteimage Project Knowledge
 
 ## Overview
 
-This project is a simple voting application called "Logovote". Users can vote on logos within different namespaces. It also includes a superadmin interface for managing namespaces and data.
+This project is a simple voting application called "Voteimage". Users can vote on logos within different namespaces. It also includes a superadmin interface for managing namespaces and data.
 
 ## Tech Stack
 

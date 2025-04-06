@@ -1,6 +1,6 @@
 # App Directory Knowledge
 
-This directory contains the core application code for Logovote.
+This directory contains the core application code for Voteimage.
 
 ## Structure
 

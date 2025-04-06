@@ -699,7 +699,7 @@ superadminRouter.get('/export', async (req, res) => {
     console.log('Superadmin: Received request to export data.');
     const now = new Date();
     const timestamp = now.toISOString().replace(/[:\-T]/g, '').split('.')[0]; // YYYYMMDDHHMMSS
-    const filename = `logovote_backup_${timestamp}.zip`;
+    const filename = `voteimage_backup_${timestamp}.zip`;
 
     res.setHeader('Content-Type', 'application/zip');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
@@ -1024,7 +1024,7 @@ ensureDataDirs()
     .then(loadFriendlyUrlMap)
     .then(() => {
         app.listen(port, () => {
-            console.log(`LogoVote backend listening at http://localhost:${port}`);
+            console.log(`VoteImage backend listening at http://localhost:${port}`);
             console.log('[Cron] Namespace pruning job scheduled to run daily at midnight.');
         });
     }).catch(err => {

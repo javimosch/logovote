@@ -1,5 +1,5 @@
 {
-  "appTitle": "LogoVote Tool",
+  "appTitle": "VoteImage Tool",
   "currentNamespace": "Current Namespace",
   "loading": "Loading...",
   "adminControls": "Admin Controls",
@@ -63,7 +63,7 @@
   "descriptionNone": "No description yet.",
   "logoViewerVoteBtn": "Vote for this Logo",
 
-  "superadminTitle": "LogoVote Superadmin",
+  "superadminTitle": "VoteImage Superadmin",
   "refreshListBtn": "Refresh List",
   "deleteEmptyBtn": "Delete Empty Namespaces",
   "deleteAllBtn": "Delete ALL Namespaces",

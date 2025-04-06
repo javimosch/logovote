@@ -1,5 +1,5 @@
 {
-  "appTitle": "Outil LogoVote",
+  "appTitle": "Outil VoteImage",
   "currentNamespace": "Espace Actuel",
   "loading": "Chargement...",
   "adminControls": "Contrôles Admin",
@@ -63,7 +63,7 @@
   "descriptionNone": "Pas encore de description.",
   "logoViewerVoteBtn": "Voter pour ce Logo",
 
-  "superadminTitle": "LogoVote Superadmin",
+  "superadminTitle": "VoteImage Superadmin",
   "refreshListBtn": "Rafraîchir la Liste",
   "deleteEmptyBtn": "Supprimer Espaces Vides",
   "deleteAllBtn": "Supprimer TOUS les Espaces",

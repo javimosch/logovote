@@ -1,8 +1,6 @@
-# LogoVote Tool 🗳️
+# VoteImage Tool 🗳️
 
 A simple web application for creating namespaces where users can upload logos and vote on their favorites. Features include admin controls, friendly URLs, multiple file uploads, logo descriptions, and a superadmin interface for management.
-
-Created for [enbauges.fr](https://enbauges.fr) 🏔️
 
 ## Features ✨
 
@@ -27,7 +25,7 @@ Created for [enbauges.fr](https://enbauges.fr) 🏔️
 1.  **Clone the repository:**
     ```bash
     git clone <repository-url>
-    cd logovote
+    cd voteimage
     ```
 2.  **Install dependencies:**
     ```bash
@@ -53,7 +51,7 @@ Created for [enbauges.fr](https://enbauges.fr) 🏔️
 
 1.  **Build the Docker image:**
     ```bash
-    docker build -t logovote .
+    docker build -t voteimage .
     ```
 2.  **(Optional) Configure Superadmin via `.env`:**
     *   Ensure the `app/.env` file exists as described in the local development steps. The `docker-compose.yml` file is configured to load this.
@@ -70,7 +68,7 @@ Created for [enbauges.fr](https://enbauges.fr) 🏔️
 
 *   Namespace metadata and vote identifiers are stored in JSON files within `./app/data/namespaces`.
 *   Uploaded logos are stored in subdirectories within `./app/data/uploads`.
-*   When using Docker Compose, this data is persisted in a Docker volume named `logovote_data` (or similar, based on the project directory name).
+*   When using Docker Compose, this data is persisted in a Docker volume named `voteimage_data` (or similar, based on the project directory name).
 
 ## Contributing 🙏
 
