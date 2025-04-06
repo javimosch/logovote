@@ -31,14 +31,10 @@
         }
 
         .logo-viewer-content {
-            display: block;
-            width: auto; /* Adjust based on image */
-            height: auto; /* Adjust based on image */
-            max-width: 85vw; /* Max width */
-            max-height: 75vh; /* Max height, leave space for buttons */
-            object-fit: contain; /* Scale the image down, keeping aspect ratio */
-            cursor: default; /* Default cursor for the image itself */
-            margin-bottom: 1rem; /* Space below image */
+            @apply w-auto h-auto max-w-[90vw] max-h-[70vh] md:max-w-3xl md:max-h-[80vh];
+            object-fit: contain;
+            cursor: default;
+            margin-bottom: 1rem;
         }
 
         .logo-viewer-controls {
@@ -52,18 +48,10 @@
         }
 
         .logo-viewer-nav {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            background-color: rgba(50, 50, 50, 0.6);
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            font-size: 30px;
+            @apply absolute top-1/2 -translate-y-1/2 bg-gray-800/60 text-white p-2 md:p-3 text-2xl md:text-3xl rounded;
             cursor: pointer;
-            border-radius: 5px;
             transition: background-color 0.3s;
-            z-index: 1002; /* Above image */
+            z-index: 1002;
         }
         .logo-viewer-nav:hover {
             background-color: rgba(80, 80, 80, 0.8);
@@ -80,19 +68,15 @@
         }
 
         .logo-viewer-vote-btn {
-             background-color: #28a745; /* Green */
-             color: white;
-             border: none;
-             padding: 10px 20px;
-             font-size: 16px;
-             font-weight: bold;
-             border-radius: 5px;
-             cursor: pointer;
-             transition: background-color 0.3s;
-             margin: 0 10px; /* Space around vote button */
+            @apply bg-green-600 hover:bg-green-700 text-white font-bold px-6 py-3 rounded-lg;
+            font-size: 1rem;
+            transition: background-color 0.3s;
+            margin: 0 10px;
         }
-        .logo-viewer-vote-btn:hover {
-             background-color: #218838; /* Darker green */
+        @media (max-width: 640px) {
+            .logo-viewer-vote-btn {
+                @apply px-4 py-2 text-sm;
+            }
         }
 
         .logo-viewer-close {
@@ -108,15 +92,14 @@
         }
 
         /* --- NEW: Style for language switcher --- */
+        .lang-switcher {
+            @apply flex justify-end space-x-2 text-sm md:text-base;
+        }
         .lang-switcher a {
-            cursor: pointer;
-            text-decoration: underline;
-            margin: 0 5px;
+            @apply px-2 py-1 rounded hover:bg-gray-100 transition-colors;
         }
         .lang-switcher a.active {
-            font-weight: bold;
-            text-decoration: none;
-            cursor: default;
+            @apply bg-blue-100 text-blue-800 hover:bg-blue-100;
         }
         /* --- END NEW --- */
     </style>
@@ -124,8 +107,9 @@
 <body class="bg-gray-100 p-8 font-sans">
 
             <!-- --- NEW: Language Switcher --- -->
-        <div class="lang-switcher text-right mb-4 text-sm">
-            <a id="lang-en">EN</a> | <a id="lang-fr">FR</a>
+        <div class="lang-switcher mb-4">
+            <a id="lang-en" class="px-3 py-1">EN</a>
+            <a id="lang-fr" class="px-3 py-1">FR</a>
         </div>
         <!-- --- END NEW --- -->
         <div class="container mx-auto bg-white p-6 rounded-lg shadow-md">
@@ -133,14 +117,15 @@
 
         <!-- Namespace Info -->
         <div id="namespace-info" class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded">
-            <h2 class="text-xl font-semibold mb-2" data-i18n="currentNamespace">Current Namespace</h2>
-            <p id="current-namespace-id" class="mb-2">Loading...</p>
+            
             <div id="admin-controls-section" class="hidden mt-4 space-y-4">
+                <h2 class="text-xl font-semibold mb-2" data-i18n="currentNamespace">Current Namespace</h2>
+                <p id="current-namespace-id" class="mb-2">Loading...</p>
                 <h3 class="font-semibold text-lg text-red-600" data-i18n="adminControls">Admin Controls</h3>
                 <div>
                     <label for="friendly-url-input" class="block text-sm font-medium text-gray-700 mb-1" data-i18n="friendlyUrlLabel">Friendly URL Name:</label>
-                    <div class="flex items-center space-x-2">
-                        <input type="text" id="friendly-url-input" data-i18n-placeholder="friendlyUrlPlaceholder" placeholder="e.g., my-cool-event" class="flex-grow p-2 border border-gray-300 rounded shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    <div class="flex items-center space-x-2 md:flex-row flex-col-reverse gap-2">
+                        <input type="text" id="friendly-url-input" data-i18n-placeholder="friendlyUrlPlaceholder" placeholder="e.g., my-cool-event" class="flex-grow p-2 border border-gray-300 rounded shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm md:text-base md:w-auto w-full">
                         <button id="set-friendly-url-btn" data-i18n="setFriendlyUrlBtn" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out">Set Name</button>
                     </div>
                     <p id="friendly-url-status" data-i18n-base="currentFriendlyUrl" class="mt-1 text-sm text-gray-600">Current: <span id="current-friendly-url" class="font-medium">None</span></p>
@@ -177,7 +162,7 @@
         <!-- Logo Grid -->
         <div id="logo-grid-section" class="hidden">
             <h2 class="text-xl font-semibold mb-4" data-i18n="voteOnLogosTitle">Vote on Logos</h2>
-            <div id="logo-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <div id="logo-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 px-2 sm:px-0">
                 <!-- Logos will be loaded here -->
             </div>
              <p id="no-logos-message" data-i18n="noLogosMessage" class="text-center text-gray-500 hidden">No logos uploaded yet for this namespace.</p>
@@ -504,23 +489,23 @@
 
         function createLogoElement(logo, index) { // Accept index
             const div = document.createElement('div');
-            div.className = 'bg-white p-4 rounded-lg shadow hover:shadow-lg transition-shadow duration-200 ease-in-out relative flex flex-col'; // Added flex flex-col
+            div.className = 'bg-white p-3 md:p-4 rounded-lg shadow hover:shadow-lg transition-shadow duration-200 ease-in-out relative flex flex-col';
 
             const img = document.createElement('img');
             const imgSrc = `${apiUrl}/data/uploads/${logo.path}`;
             img.src = imgSrc;
             img.alt = 'Logo Thumbnail';
-            img.className = 'w-full h-40 object-contain mb-3 cursor-pointer';
+            img.className = 'w-full h-32 md:h-40 object-contain mb-2 md:mb-3 cursor-pointer';
             img.onclick = () => openLogoViewer(index); // Pass index to openLogoViewer
 
             const voteCount = document.createElement('p');
             voteCount.textContent = `Votes: ${logo.votes}`;
-            voteCount.className = 'text-center text-lg font-semibold mb-2'; // Reduced margin bottom
+            voteCount.className = 'text-center text-base md:text-lg font-semibold mb-1 md:mb-2';
             voteCount.id = `votes-${logo.id}`;
 
             // --- MODIFICATION: Add Description Display/Edit ---
             const descriptionContainer = document.createElement('div');
-            descriptionContainer.className = 'mt-2 mb-3 flex-grow'; // Added flex-grow
+            descriptionContainer.className = 'mt-1 mb-2 md:mb-3 flex-grow';
 
             const descriptionDisplay = document.createElement('p');
             descriptionDisplay.id = `desc-display-${logo.id}`;
@@ -535,7 +520,7 @@
                 descriptionInput.value = logo.description || '';
                 descriptionInput.placeholder = "Enter description...";
                 descriptionInput.rows = 2; // Start with 2 rows
-                descriptionInput.className = 'w-full p-1 border border-gray-300 rounded text-sm mb-1'; // Added mb-1
+                descriptionInput.className = 'w-full p-1 border border-gray-300 rounded text-xs md:text-sm mb-1';
                 // Add input event listener for debounced saving
                 descriptionInput.addEventListener('input', () => handleDescriptionInput(logo.id));
 
